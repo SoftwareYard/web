@@ -8,11 +8,12 @@ import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 const navLinks = [
-  { href: "#services", label: "Services" },
-  { href: "#about", label: "About" },
-  { href: "#portfolio", label: "Portfolio" },
-  { href: "#testimonials", label: "Testimonials" },
-  { href: "#contact", label: "Contact" },
+  { href: "/#services", label: "Services" },
+  { href: "/#about", label: "About" },
+  { href: "/#portfolio", label: "Portfolio" },
+  { href: "/#testimonials", label: "Testimonials" },
+  { href: "/careers", label: "Careers" },
+  { href: "/#contact", label: "Contact" },
 ]
 
 export function Navbar() {
@@ -32,12 +33,12 @@ export function Navbar() {
       className={cn(
         "fixed top-0 left-0 right-0 z-50 transition-all duration-300",
         scrolled
-          ? "py-3 bg-background/80 backdrop-blur-xl border-b border-border/50 shadow-sm"
+          ? "py-3 bg-background/80 backdrop-blur-md border-b border-border/50 shadow-sm"
           : "bg-transparent py-6"
       )}
     >
       <div className="container mx-auto px-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2">
+        <Link href="/" className="flex items-center gap-2 md:w-48">
           <Image
             src="/logo.png"
             alt="SoftwareYard"
@@ -49,7 +50,7 @@ export function Navbar() {
         </Link>
 
         {/* Desktop Navigation */}
-        <nav className="hidden md:flex items-center gap-8">
+        <nav className="hidden md:flex items-center justify-center gap-8 flex-1">
           {navLinks.map((link) => (
             <Link
               key={link.href}
@@ -61,24 +62,17 @@ export function Navbar() {
           ))}
         </nav>
 
-        <div className="hidden md:flex items-center gap-4">
-          <Button variant="ghost" size="sm">
-            Log in
-          </Button>
-          <Button size="sm" className="rounded-full px-6">
-            Get Started
-          </Button>
+        {/* Spacer for balance / Mobile Menu Button */}
+        <div className="md:w-48 md:flex md:justify-end">
+          <button
+            type="button"
+            className="md:hidden p-2"
+            onClick={() => setIsOpen(!isOpen)}
+            aria-label="Toggle menu"
+          >
+            {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+          </button>
         </div>
-
-        {/* Mobile Menu Button */}
-        <button
-          type="button"
-          className="md:hidden p-2"
-          onClick={() => setIsOpen(!isOpen)}
-          aria-label="Toggle menu"
-        >
-          {isOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-        </button>
       </div>
 
       {/* Mobile Navigation */}
@@ -94,13 +88,7 @@ export function Navbar() {
               >
                 {link.label}
               </Link>
-            ))}
-            <div className="flex flex-col gap-3 pt-4 border-t border-border">
-              <Button variant="ghost" className="justify-start">
-                Log in
-              </Button>
-              <Button className="rounded-full">Get Started</Button>
-            </div>
+            ))}           
           </nav>
         </div>
       )}

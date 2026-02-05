@@ -1,6 +1,6 @@
 "use client"
 
-import { useRef, useState } from "react"
+import { useRef, useState, useEffect, useCallback } from "react"
 import { Quote, ChevronLeft, ChevronRight, Star } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useInView } from "@/hooks/use-in-view"
@@ -36,17 +36,51 @@ const testimonials = [
   },
 ]
 
+const AUTO_SWAP_INTERVAL = 5000
+
 export function TestimonialsSection() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const nextTestimonial = () => {
+  const nextTestimonial = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % testimonials.length)
+  }, [])
+
+  const prevTestimonial = useCallback(() => {
+    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)
+  }, [])
+
+  const resetInterval = useCallback(() => {
+    if (intervalRef.current) {
+      clearInterval(intervalRef.current)
+    }
+    intervalRef.current = setInterval(nextTestimonial, AUTO_SWAP_INTERVAL)
+  }, [nextTestimonial])
+
+  useEffect(() => {
+    intervalRef.current = setInterval(nextTestimonial, AUTO_SWAP_INTERVAL)
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current)
+      }
+    }
+  }, [nextTestimonial])
+
+  const handlePrev = () => {
+    prevTestimonial()
+    resetInterval()
   }
 
-  const prevTestimonial = () => {
-    setCurrentIndex((prev) => (prev - 1 + testimonials.length) % testimonials.length)
+  const handleNext = () => {
+    nextTestimonial()
+    resetInterval()
+  }
+
+  const handleDotClick = (index: number) => {
+    setCurrentIndex(index)
+    resetInterval()
   }
 
   return (
@@ -115,7 +149,7 @@ export function TestimonialsSection() {
                 variant="outline"
                 size="icon"
                 className="rounded-full border-background/20 text-background hover:bg-background/10 bg-transparent"
-                onClick={prevTestimonial}
+                onClick={handlePrev}
               >
                 <ChevronLeft className="w-5 h-5" />
               </Button>
@@ -125,7 +159,7 @@ export function TestimonialsSection() {
                   <button
                     key={index}
                     type="button"
-                    onClick={() => setCurrentIndex(index)}
+                    onClick={() => handleDotClick(index)}
                     className={cn(
                       "w-2 h-2 rounded-full transition-all",
                       index === currentIndex ? "bg-background w-8" : "bg-background/30"
@@ -138,7 +172,7 @@ export function TestimonialsSection() {
                 variant="outline"
                 size="icon"
                 className="rounded-full border-background/20 text-background hover:bg-background/10 bg-transparent"
-                onClick={nextTestimonial}
+                onClick={handleNext}
               >
                 <ChevronRight className="w-5 h-5" />
               </Button>
