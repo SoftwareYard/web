@@ -7,6 +7,9 @@ node_modules
 out
 build
 
+# API
+dist
+
 # Environment files
 .env
 .env.local

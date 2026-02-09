@@ -3,7 +3,7 @@
 import React from "react"
 
 import { useRef, useState } from "react"
-import { Mail, MapPin, Clock, Send, CheckCircle2 } from "lucide-react"
+import { Mail, MapPin, Clock, Send, CheckCircle2, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -31,15 +31,46 @@ const contactInfo = [
   },
 ]
 
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
+
 export function ContactSection() {
   const [submitted, setSubmitted] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
   const ref = useRef<HTMLDivElement>(null)
+  const formRef = useRef<HTMLFormElement>(null)
   const isInView = useInView(ref, { once: true })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setSubmitted(true)
-    setTimeout(() => setSubmitted(false), 3000)
+    setLoading(true)
+    setError("")
+
+    const formData = new FormData(e.target as HTMLFormElement)
+
+    try {
+      const res = await fetch(`${API_URL}/api/contact`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName: formData.get("firstName"),
+          lastName: formData.get("lastName"),
+          email: formData.get("email"),
+          company: formData.get("company"),
+          message: formData.get("message"),
+        }),
+      })
+
+      if (!res.ok) throw new Error("Failed to send message")
+
+      setSubmitted(true)
+      formRef.current?.reset()
+      setTimeout(() => setSubmitted(false), 3000)
+    } catch {
+      setError("Something went wrong. Please try again.")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (
@@ -114,6 +145,7 @@ export function ContactSection() {
             className={cn("opacity-0", isInView && "animate-slide-in-right animation-delay-100")}
           >
             <form
+              ref={formRef}
               onSubmit={handleSubmit}
               className="bg-card border border-border rounded-3xl p-8 md:p-10"
             >
@@ -127,6 +159,7 @@ export function ContactSection() {
                   </label>
                   <Input
                     id="firstName"
+                    name="firstName"
                     placeholder="John"
                     className="rounded-xl h-12"
                     required
@@ -141,6 +174,7 @@ export function ContactSection() {
                   </label>
                   <Input
                     id="lastName"
+                    name="lastName"
                     placeholder="Doe"
                     className="rounded-xl h-12"
                     required
@@ -154,6 +188,7 @@ export function ContactSection() {
                 </label>
                 <Input
                   id="email"
+                  name="email"
                   type="email"
                   placeholder="john@example.com"
                   className="rounded-xl h-12"
@@ -167,6 +202,7 @@ export function ContactSection() {
                 </label>
                 <Input
                   id="company"
+                  name="company"
                   placeholder="Your Company"
                   className="rounded-xl h-12"
                 />
@@ -178,6 +214,7 @@ export function ContactSection() {
                 </label>
                 <Textarea
                   id="message"
+                  name="message"
                   placeholder="Tell us about your project..."
                   rows={5}
                   className="rounded-xl resize-none"
@@ -185,16 +222,25 @@ export function ContactSection() {
                 />
               </div>
 
+              {error && (
+                <p className="text-destructive text-sm mb-4">{error}</p>
+              )}
+
               <Button
                 type="submit"
                 size="lg"
                 className="w-full rounded-full gap-2"
-                disabled={submitted}
+                disabled={loading || submitted}
               >
                 {submitted ? (
                   <>
                     <CheckCircle2 className="w-5 h-5" />
                     Message Sent!
+                  </>
+                ) : loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Sending...
                   </>
                 ) : (
                   <>
