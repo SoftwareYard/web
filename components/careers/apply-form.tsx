@@ -76,18 +76,7 @@ export function ApplyForm({ jobTitle }: ApplyFormProps) {
           />
         </div>
       </div>
-
-      <div className="mb-6">
-        <label htmlFor="portfolio" className="block text-sm font-medium mb-2">
-          Portfolio / Website (Optional)
-        </label>
-        <Input
-          id="portfolio"
-          type="url"
-          placeholder="https://yourwebsite.com"
-          className="rounded-xl h-12"
-        />
-      </div>
+     
 
       <div className="mb-8">
         <label htmlFor="coverLetter" className="block text-sm font-medium mb-2">
