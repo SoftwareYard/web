@@ -20,7 +20,6 @@ export default function Home() {
       <LogosSection />
       <ServicesSection />
       <AboutSection />
-      <PortfolioSection />
       <ProcessSection />
       <TechStackSection />
       <TeamSection />
