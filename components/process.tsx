@@ -46,7 +46,7 @@ const steps: Step[] = [
 
 function StepCard({ step, index, isLast }: { step: Step; index: number; isLast: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-50px" })
+  const isInView = useInView(ref, { once: true })
   const Icon = step.icon
 
   return (

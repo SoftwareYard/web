@@ -34,7 +34,7 @@ const contactInfo = [
 export function ContactSection() {
   const [submitted, setSubmitted] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const isInView = useInView(ref, { once: true })
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()

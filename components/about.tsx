@@ -16,7 +16,7 @@ const features = [
 
 export function AboutSection() {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const isInView = useInView(ref, { once: true })
 
   return (
     <section id="about" className="py-24 md:py-32 bg-secondary/30">

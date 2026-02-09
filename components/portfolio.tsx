@@ -61,7 +61,7 @@ function ProjectCard({
   index: number
 }) {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-50px" })
+  const isInView = useInView(ref, { once: true })
 
   return (
     <div

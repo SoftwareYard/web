@@ -41,7 +41,7 @@ const AUTO_SWAP_INTERVAL = 5000
 export function TestimonialsSection() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const isInView = useInView(ref, { once: true })
   const intervalRef = useRef<NodeJS.Timeout | null>(null)
 
   const nextTestimonial = useCallback(() => {

@@ -12,7 +12,7 @@ export function useInView(
   ref: RefObject<Element | null>,
   options: UseInViewOptions = {}
 ): boolean {
-  const { threshold = 0, margin = "0px", once = false } = options
+  const { threshold = 0.2, margin = "0px", once = false } = options
   const [isInView, setIsInView] = useState(false)
 
   useEffect(() => {

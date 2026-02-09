@@ -14,7 +14,7 @@ interface JobCardProps {
 
 export function JobCard({ job, index }: JobCardProps) {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const isInView = useInView(ref, { once: true })
 
   return (
     <Link href={`/careers/${job.slug}`}>

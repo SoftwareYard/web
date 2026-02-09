@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils"
 
 export function CTASection() {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-100px" })
+  const isInView = useInView(ref, { once: true })
 
   return (
     <section className="py-24 md:py-32">

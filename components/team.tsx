@@ -60,7 +60,7 @@ const team = [
 
 function TeamCard({ member, index }: { member: (typeof team)[0]; index: number }) {
   const ref = useRef<HTMLDivElement>(null)
-  const isInView = useInView(ref, { once: true, margin: "-50px" })
+  const isInView = useInView(ref, { once: true })
 
   return (
     <div
