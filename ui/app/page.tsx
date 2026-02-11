@@ -11,7 +11,7 @@ import { CTASection } from "@/components/cta"
 import { ContactSection } from "@/components/contact"
 import { Footer } from "@/components/footer"
 
-export default function Home() {
+export default async function Home() {
   return (
     <main className="min-h-screen">
       <Navbar />
