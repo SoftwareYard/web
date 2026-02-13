@@ -24,6 +24,7 @@ model TeamMember {
   role      String
   image     String   @default("")
   bio       String   @default("")
+  email     String?
   linkedin  String?
   twitter   String?
   github    String?

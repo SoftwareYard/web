@@ -1,11 +1,14 @@
+import "dotenv/config";
 import { PrismaClient } from "../src/generated/prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import bcrypt from "bcryptjs";
 
-const prisma = new (PrismaClient as any)() as InstanceType<typeof PrismaClient>;
+const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
+const prisma = new PrismaClient({ adapter });
 
 async function main() {
   // Seed admin user
-  const hashedPassword = await bcrypt.hash("changeme123", 12);
+  const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASS, 12);
   await prisma.adminUser.upsert({
     where: { username: "admin" },
     update: {},
@@ -24,6 +27,7 @@ async function main() {
       role: "CEO & Founder",
       image: "/team/sarah-chen.jpg",
       bio: "15+ years in tech leadership. Previously at Google and Microsoft.",
+      email: "sarah@softwareyard.co",
       linkedin: "#",
       twitter: "#",
       sortOrder: 0,
@@ -33,6 +37,7 @@ async function main() {
       role: "CTO",
       image: "/team/marcus.jpg",
       bio: "Full-stack architect with expertise in cloud infrastructure.",
+      email: "marcus@softwareyard.co",
       linkedin: "#",
       twitter: "#",
       github: "#",
@@ -43,6 +48,7 @@ async function main() {
       role: "Head of Design",
       image: "/team/elena.jpg",
       bio: "Award-winning designer focused on user-centered experiences.",
+      email: "elena@softwareyard.co",
       linkedin: "#",
       twitter: "#",
       sortOrder: 2,
@@ -52,6 +58,7 @@ async function main() {
       role: "Lead Developer",
       image: "/team/david.jpg",
       bio: "Expert in React, Node.js, and modern web technologies.",
+      email: "david@softwareyard.co",
       linkedin: "#",
       github: "#",
       sortOrder: 3,
@@ -61,6 +68,7 @@ async function main() {
       role: "Project Manager",
       image: "/team/priya.jpg",
       bio: "Agile certified PM with 10+ years delivering complex projects.",
+      email: "priya@softwareyard.co",
       linkedin: "#",
       twitter: "#",
       sortOrder: 4,
@@ -70,6 +78,7 @@ async function main() {
       role: "DevOps Engineer",
       image: "/team/james.jpg",
       bio: "Kubernetes and AWS specialist. Automation enthusiast.",
+      email: "james@softwareyard.co",
       linkedin: "#",
       github: "#",
       sortOrder: 5,

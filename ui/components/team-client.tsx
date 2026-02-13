@@ -2,7 +2,7 @@
 
 import { useRef } from "react"
 import Image from "next/image"
-import { Linkedin, Twitter, Github } from "lucide-react"
+import { Mail } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
 import { cn } from "@/lib/utils"
 
@@ -12,6 +12,7 @@ interface TeamMember {
   role: string
   image: string
   bio: string
+  email?: string | null
   linkedin?: string | null
   twitter?: string | null
   github?: string | null
@@ -30,56 +31,33 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
       )}
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      {/* Card container with overflow hidden for the slide effect */}
       <div className="relative overflow-hidden rounded-2xl bg-foreground aspect-square mb-4">
-        {/* Image container that slides up and left on hover */}
-        <div className="absolute inset-0 transition-transform duration-300 ease-out group-hover:-translate-y-6 group-hover:-translate-x-6">
-          {member.image && !member.image.includes("placeholder") ? (
-            <Image
-              src={member.image || "/placeholder.svg"}
-              alt={member.name}
-              fill
-              className="object-cover"
-            />
-          ) : (
-            <>
-              <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-5xl font-bold text-muted-foreground/30">
-                  {member.name.charAt(0)}
-                </span>
-              </div>
-            </>
-          )}
-        </div>
+        {member.image && !member.image.includes("placeholder") ? (
+          <Image
+            src={member.image || "/placeholder.svg"}
+            alt={member.name}
+            fill
+            className="object-cover"
+          />
+        ) : (
+          <>
+            <div className="absolute inset-0 bg-gradient-to-br from-muted to-muted-foreground/20" />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-5xl font-bold text-muted-foreground/30">
+                {member.name.charAt(0)}
+              </span>
+            </div>
+          </>
+        )}
 
-        {/* Social links that appear in bottom right corner */}
-        <div className="absolute bottom-3 right-3 flex flex-col gap-2 opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300 ease-out">
-          {member.linkedin && (
-            <a
-              href={member.linkedin}
-              className="w-9 h-9 rounded-full bg-background flex items-center justify-center text-foreground hover:bg-accent hover:text-background transition-colors"
-            >
-              <Linkedin className="w-4 h-4" />
-            </a>
-          )}
-          {member.twitter && (
-            <a
-              href={member.twitter}
-              className="w-9 h-9 rounded-full bg-background flex items-center justify-center text-foreground hover:bg-accent hover:text-background transition-colors"
-            >
-              <Twitter className="w-4 h-4" />
-            </a>
-          )}
-          {member.github && (
-            <a
-              href={member.github}
-              className="w-9 h-9 rounded-full bg-background flex items-center justify-center text-foreground hover:bg-accent hover:text-background transition-colors"
-            >
-              <Github className="w-4 h-4" />
-            </a>
-          )}
-        </div>
+        {member.email && (
+          <a
+            href={`mailto:${member.email}`}
+            className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-background flex items-center justify-center text-foreground hover:bg-accent hover:text-background transition-all duration-300 ease-out opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
+          >
+            <Mail className="w-4 h-4" />
+          </a>
+        )}
       </div>
 
       <h3 className="text-base font-semibold">{member.name}</h3>

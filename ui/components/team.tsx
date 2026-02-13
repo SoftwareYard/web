@@ -8,6 +8,7 @@ interface TeamMember {
   role: string
   image: string
   bio: string
+  email?: string | null
   linkedin?: string | null
   twitter?: string | null
   github?: string | null

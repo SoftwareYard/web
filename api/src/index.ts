@@ -6,6 +6,7 @@ import { contactRouter } from "./routes/contact";
 import { authRouter } from "./routes/auth";
 import { teamRouter } from "./routes/team";
 import { jobsRouter } from "./routes/jobs";
+import { applyRouter } from "./routes/apply";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -18,6 +19,7 @@ app.use("/api/contact", contactRouter);
 app.use("/api/auth", authRouter);
 app.use("/api/team", teamRouter);
 app.use("/api/jobs", jobsRouter);
+app.use("/api/apply", applyRouter);
 
 app.get("/health", (_req, res) => {
   res.json({ status: "ok" });

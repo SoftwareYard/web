@@ -27,6 +27,7 @@ const teamSchema = z.object({
   role: z.string().min(1, "Role is required"),
   image: z.string().default(""),
   bio: z.string().default(""),
+  email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   linkedin: z.string().optional(),
   twitter: z.string().optional(),
   github: z.string().optional(),
@@ -59,6 +60,7 @@ export function TeamForm({
       role: "",
       image: "",
       bio: "",
+      email: "",
       linkedin: "",
       twitter: "",
       github: "",
@@ -131,6 +133,19 @@ export function TeamForm({
                   <FormLabel>Bio</FormLabel>
                   <FormControl>
                     <Textarea placeholder="Short bio..." {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="email"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email</FormLabel>
+                  <FormControl>
+                    <Input type="email" placeholder="name@softwareyard.co" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
