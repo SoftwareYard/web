@@ -1,6 +1,10 @@
 import { Router, Request, Response } from "express";
 import { Resend } from "resend";
 import multer from "multer";
+import { uploadToBunny } from "../lib/bunny";
+import { mapJobTitleToRole } from "../lib/role-mapper";
+import { prisma } from "../lib/prisma";
+import { grossToNetMK } from "../services/salary.calculator.service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 export const applyRouter = Router();
@@ -17,12 +21,29 @@ const upload = multer({
   },
 });
 
+async function getEurToMkdRate(): Promise<number> {
+  const res = await fetch(
+    "https://api.frankfurter.app/latest?from=EUR&to=MKD"
+  );
+  if (!res.ok) throw new Error("Failed to fetch EUR/MKD rate");
+  const data = (await res.json()) as { rates: { MKD: number } };
+  return data.rates.MKD;
+}
+
 applyRouter.post(
   "/",
   upload.single("cv"),
   async (req: Request, res: Response) => {
-    const { fullName, email, phone, expectedSalary, jobTitle, linkedin, github, coverLetter } =
-      req.body;
+    const {
+      fullName,
+      email,
+      phone,
+      expectedSalary,
+      jobTitle,
+      linkedin,
+      github,
+      coverLetter,
+    } = req.body;
 
     if (!fullName || !email || !phone || !expectedSalary || !jobTitle) {
       res.status(400).json({ error: "Missing required fields" });
@@ -63,6 +84,48 @@ applyRouter.post(
       console.error("Resend error:", error);
       res.status(500).json({ error: "Failed to send application" });
       return;
+    }
+
+    // Map job title to role, upload CV, and calculate salary
+    let cvLink = "";
+    try {
+      const { id: roleId, name: roleName } = await mapJobTitleToRole(jobTitle);
+
+      // Upload CV to Bunny CDN under JobApplications/{RoleName}/
+      try {
+        cvLink = await uploadToBunny(
+          req.file.buffer,
+          req.file.originalname,
+          `JobApplications/${roleName}`
+        );
+      } catch (uploadError) {
+        console.error("Bunny CDN upload error:", uploadError);
+      }
+
+      const grossEur = parseInt(expectedSalary, 10);
+
+      const rate = await getEurToMkdRate();
+      const grossMkd = Math.round(grossEur * rate);
+      const { net: netMkd } = grossToNetMK(grossMkd);
+      const netEur = Math.round(netMkd / rate);
+
+      await prisma.jobApplication.create({
+        data: {
+          fullName,
+          phone,
+          email,
+          grossSalary: grossEur,
+          salaryGrossEur: grossEur,
+          salaryGrossMkd: grossMkd,
+          salaryNetEur: netEur,
+          salaryNetMkd: netMkd,
+          roleId,
+          jobTitle,
+          cvLink,
+        },
+      });
+    } catch (dbError) {
+      console.error("Failed to save application:", dbError);
     }
 
     res.json({ success: true });

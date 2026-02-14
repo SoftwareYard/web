@@ -20,6 +20,26 @@ async function main() {
   });
   console.log("Admin user created (admin / changeme123)");
 
+  // Seed candidate roles
+  const candidateRoles = [
+    { name: "FullStack" },
+    { name: "FrontEnd" },
+    { name: "DevOPS" },
+    { name: "QA" },
+    { name: "PM" },
+    { name: "OTHER" },
+  ];
+
+  const existingRoles = await prisma.candidateRole.count();
+  if (existingRoles === 0) {
+    for (const role of candidateRoles) {
+      await prisma.candidateRole.create({ data: role });
+    }
+    console.log(`Seeded ${candidateRoles.length} candidate roles`);
+  } else {
+    console.log("Candidate roles already exist, skipping");
+  }
+
   // Seed team members
   const teamMembers = [
     {

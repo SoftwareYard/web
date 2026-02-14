@@ -53,3 +53,38 @@ model Job {
 
   @@map("jobs")
 }
+
+model CandidateRole {
+  id   String @id @default(cuid())
+  name String @unique
+
+  jobApplications JobApplication[]
+
+  @@map("candidate_roles")
+}
+
+model JobApplication {
+  id                  String    @id @default(cuid())
+  fullName            String    @map("full_name")
+  phone               String
+  email               String
+  grossSalary         Int       @map("gross_salary")
+  salaryGrossEur      Int       @map("salary_gross_eur")
+  salaryGrossMkd      Int       @map("salary_gross_mkd")
+  salaryNetEur        Int       @map("salary_net_eur")
+  salaryNetMkd        Int       @map("salary_net_mkd")
+  roleId              String?   @map("role_id")
+  role                CandidateRole? @relation(fields: [roleId], references: [id])
+  jobTitle            String    @map("job_title")
+  cvLink              String    @map("cv_link")
+  taskLink            String?   @map("task_link")
+  hrInterviewTime     DateTime? @map("hr_interview_time")
+  firstInterviewTime  DateTime? @map("first_interview_time")
+  secondInterviewTime DateTime? @map("second_interview_time")
+  hrNotes             String?   @map("hr_notes")
+  techNotes           String?   @map("tech_notes")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  @@map("job_applications")
+}

@@ -2,7 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
-import { LayoutDashboard, Users, Briefcase, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, FileText, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AuthGuard } from "./auth-guard";
 import {
@@ -24,6 +24,7 @@ const navItems = [
   { title: "Dashboard", href: "/ctrl", icon: LayoutDashboard },
   { title: "Team", href: "/ctrl/team", icon: Users },
   { title: "Jobs", href: "/ctrl/jobs", icon: Briefcase },
+  { title: "Job Applications", href: "/ctrl/applications", icon: FileText },
 ];
 
 export function CmsShell({ children }: { children: React.ReactNode }) {
