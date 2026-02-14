@@ -2,6 +2,7 @@
 
 import { usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import { LayoutDashboard, Users, Briefcase, FileText, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AuthGuard } from "./auth-guard";
@@ -36,8 +37,8 @@ export function CmsShell({ children }: { children: React.ReactNode }) {
       <SidebarProvider>
         <Sidebar>
           <SidebarHeader className="p-4">
-            <Link href="/ctrl" className="text-lg font-bold">
-              SY Control
+            <Link href="/ctrl">
+              <Image src="/logo-black@2x.png" alt="SY Control" width={120} height={40} />
             </Link>
             <p className="text-xs text-muted-foreground">
               Logged in as {admin?.name}

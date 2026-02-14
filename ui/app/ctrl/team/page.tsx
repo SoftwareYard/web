@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { CmsShell } from "@/components/ctrl/cms-shell";
-import { TeamForm, TeamFormValues } from "@/components/ctrl/team-form";
+import { TeamForm } from "@/components/ctrl/team-form";
 import { cmsApi } from "@/lib/cms-api";
 import {
   Table,
@@ -23,9 +23,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Eye, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
 
 interface TeamMember {
   id: string;
@@ -33,9 +34,11 @@ interface TeamMember {
   role: string;
   image: string;
   bio: string;
-  linkedin: string | null;
-  twitter: string | null;
-  github: string | null;
+  email: string | null;
+  phone: string | null;
+  hireDate: string | null;
+  currentSalaryEur: number | null;
+  nextContractDate: string | null;
   sortOrder: number;
 }
 
@@ -54,22 +57,26 @@ export default function TeamPage() {
     loadMembers();
   }, [loadMembers]);
 
-  const handleCreate = async (values: TeamFormValues) => {
-    await cmsApi("/api/team", {
+  const handleCreate = async (formData: FormData) => {
+    const res = await fetch(`${API_URL}/api/team`, {
       method: "POST",
-      body: JSON.stringify(values),
+      credentials: "include",
+      body: formData,
     });
+    if (!res.ok) throw new Error("Failed to create");
     toast.success("Team member created");
     setFormOpen(false);
     loadMembers();
   };
 
-  const handleUpdate = async (values: TeamFormValues) => {
+  const handleUpdate = async (formData: FormData) => {
     if (!editing) return;
-    await cmsApi(`/api/team/${editing.id}`, {
+    const res = await fetch(`${API_URL}/api/team/${editing.id}`, {
       method: "PUT",
-      body: JSON.stringify(values),
+      credentials: "include",
+      body: formData,
     });
+    if (!res.ok) throw new Error("Failed to update");
     toast.success("Team member updated");
     setEditing(null);
     loadMembers();
@@ -98,9 +105,9 @@ export default function TeamPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>Bio</TableHead>
-              <TableHead className="w-20">Order</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Phone</TableHead>
+              <TableHead>Next Contract Date</TableHead>
               <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -108,13 +115,17 @@ export default function TeamPage() {
             {members.map((member) => (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">{member.name}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{member.role}</Badge>
+                <TableCell className="text-muted-foreground">
+                  {member.email || "—"}
                 </TableCell>
-                <TableCell className="max-w-xs truncate text-muted-foreground">
-                  {member.bio}
+                <TableCell className="text-muted-foreground">
+                  {member.phone || "—"}
                 </TableCell>
-                <TableCell>{member.sortOrder}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {member.nextContractDate
+                    ? new Date(member.nextContractDate).toLocaleDateString()
+                    : "—"}
+                </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button
@@ -122,7 +133,7 @@ export default function TeamPage() {
                       size="icon"
                       onClick={() => setEditing(member)}
                     >
-                      <Pencil className="w-4 h-4" />
+                      <Eye className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
@@ -137,7 +148,10 @@ export default function TeamPage() {
             ))}
             {members.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                <TableCell
+                  colSpan={5}
+                  className="text-center text-muted-foreground py-8"
+                >
                   No team members yet
                 </TableCell>
               </TableRow>

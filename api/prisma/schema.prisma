@@ -7,32 +7,88 @@ datasource db {
   provider = "postgresql"
 }
 
+model AdminRole {
+  id   String @id @default(cuid())
+  name String @unique
+
+  adminUsers AdminUser[]
+
+  @@map("admin_roles")
+}
+
 model AdminUser {
-  id        String   @id @default(cuid())
-  username  String   @unique
+  id        String    @id @default(cuid())
+  email     String    @unique
   password  String
   name      String
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  roleId    String    @map("role_id")
+  role      AdminRole @relation(fields: [roleId], references: [id])
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
 
   @@map("admin_users")
 }
 
 model TeamMember {
-  id        String   @id @default(cuid())
-  name      String
-  role      String
-  image     String   @default("")
-  bio       String   @default("")
-  email     String?
-  linkedin  String?
-  twitter   String?
-  github    String?
-  sortOrder Int      @default(0) @map("sort_order")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(cuid())
+  name             String
+  role             String
+  image            String    @default("")
+  bio              String    @default("")
+  email            String?
+  phone            String?
+  hireDate         DateTime? @map("hire_date")
+  currentSalaryEur Float?    @map("current_salary_eur")
+  nextContractDate DateTime? @map("next_contract_date")
+  sortOrder        Int       @default(0) @map("sort_order")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+
+  oneOnOneMeetings OneOnOneMeeting[]
+  teamContracts    TeamContract[]
 
   @@map("team_members")
+}
+
+model ContractType {
+  id   String @id @default(cuid())
+  type String @unique
+
+  @@map("contract_types")
+}
+
+model OneOnOneMeeting {
+  id                    String   @id @default(cuid())
+  userId                String   @map("user_id")
+  user                  TeamMember @relation(fields: [userId], references: [id])
+  date                  DateTime
+  feelingAtWork         String?  @map("feeling_at_work")
+  thingsOutsideWork     String?  @map("things_outside_work")
+  currentWorkload       String?  @map("current_workload")
+  problemsWithClient    String?  @map("problems_with_client")
+  problemsWithTeam      String?  @map("problems_with_team")
+  skillsToDevelop       String?  @map("skills_to_develop")
+  growingInRole         String?  @map("growing_in_role")
+  trainingOpportunities String?  @map("training_opportunities")
+  anythingElse          String?  @map("anything_else")
+  improvementSuggestions String? @map("improvement_suggestions")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("one_on_one_meetings")
+}
+
+model TeamContract {
+  id            String   @id @default(cuid())
+  userId        String   @map("user_id")
+  user          TeamMember @relation(fields: [userId], references: [id])
+  currentSalary Float    @map("current_salary")
+  nextSalary    Float?   @map("next_salary")
+  signDate      DateTime @map("sign_date")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  @@map("team_contracts")
 }
 
 model Job {

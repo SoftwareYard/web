@@ -7,14 +7,17 @@ import { requireAuth, AuthRequest } from "../middleware/auth";
 export const authRouter = Router();
 
 authRouter.post("/login", async (req: Request, res: Response) => {
-  const { username, password } = req.body;
+  const { email, password } = req.body;
 
-  if (!username || !password) {
-    res.status(400).json({ error: "Username and password are required" });
+  if (!email || !password) {
+    res.status(400).json({ error: "Email and password are required" });
     return;
   }
 
-  const admin = await prisma.adminUser.findUnique({ where: { username } });
+  const admin = await prisma.adminUser.findUnique({
+    where: { email },
+    include: { role: true },
+  });
   if (!admin || !(await bcrypt.compare(password, admin.password))) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
@@ -34,7 +37,7 @@ authRouter.post("/login", async (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    admin: { id: admin.id, username: admin.username, name: admin.name },
+    admin: { id: admin.id, email: admin.email, name: admin.name, role: admin.role.name },
   });
 });
 
@@ -46,7 +49,7 @@ authRouter.post("/logout", (_req: Request, res: Response) => {
 authRouter.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
   const admin = await prisma.adminUser.findUnique({
     where: { id: req.adminId },
-    select: { id: true, username: true, name: true },
+    select: { id: true, email: true, name: true, role: { select: { name: true } } },
   });
 
   if (!admin) {

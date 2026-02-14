@@ -7,38 +7,65 @@ const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  // Seed admin roles
+  const superAdminRole = await prisma.adminRole.upsert({
+    where: { name: "SuperAdmin" },
+    update: {},
+    create: { name: "SuperAdmin" },
+  });
+  await prisma.adminRole.upsert({
+    where: { name: "Admin" },
+    update: {},
+    create: { name: "Admin" },
+  });
+  console.log("Admin roles seeded (SuperAdmin, Admin)");
+
   // Seed admin user
   const hashedPassword = await bcrypt.hash(process.env.ADMIN_PASS, 12);
   await prisma.adminUser.upsert({
-    where: { username: "admin" },
+    where: { email: "pece.krstevski@softwareyard.co" },
     update: {},
     create: {
-      username: "admin",
+      email: "pece.krstevski@softwareyard.co",
       password: hashedPassword,
-      name: "Admin",
+      name: "Pece Krstevski",
+      roleId: superAdminRole.id,
     },
   });
-  console.log("Admin user created (admin / changeme123)");
+  console.log("Super admin user created (pece.krstevski@softwareyard.co)");
 
   // Seed candidate roles
   const candidateRoles = [
-    { name: "FullStack" },
-    { name: "FrontEnd" },
-    { name: "DevOPS" },
-    { name: "QA" },
-    { name: "PM" },
-    { name: "OTHER" },
+    "FullStack",
+    "FrontEnd",
+    "DevOPS",
+    "QA",
+    "PM",
+    "CEO",
+    "PO",
+    "HR",
+    "OTHER",
   ];
 
-  const existingRoles = await prisma.candidateRole.count();
-  if (existingRoles === 0) {
-    for (const role of candidateRoles) {
-      await prisma.candidateRole.create({ data: role });
-    }
-    console.log(`Seeded ${candidateRoles.length} candidate roles`);
-  } else {
-    console.log("Candidate roles already exist, skipping");
+  for (const name of candidateRoles) {
+    await prisma.candidateRole.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
   }
+  console.log(`Candidate roles seeded (${candidateRoles.join(", ")})`);
+
+  // Seed contract types
+  const contractTypes = ["Indefinite", "Fixed", "Contract"];
+  for (const type of contractTypes) {
+    await prisma.contractType.upsert({
+      where: { type },
+      update: {},
+      create: { type },
+    });
+  }
+  console.log("Contract types seeded (Indefinite, Fixed, Contract)");
 
   // Seed team members
   const teamMembers = [
@@ -48,8 +75,6 @@ async function main() {
       image: "/team/sarah-chen.jpg",
       bio: "15+ years in tech leadership. Previously at Google and Microsoft.",
       email: "sarah@softwareyard.co",
-      linkedin: "#",
-      twitter: "#",
       sortOrder: 0,
     },
     {
@@ -58,9 +83,6 @@ async function main() {
       image: "/team/marcus.jpg",
       bio: "Full-stack architect with expertise in cloud infrastructure.",
       email: "marcus@softwareyard.co",
-      linkedin: "#",
-      twitter: "#",
-      github: "#",
       sortOrder: 1,
     },
     {
@@ -69,8 +91,6 @@ async function main() {
       image: "/team/elena.jpg",
       bio: "Award-winning designer focused on user-centered experiences.",
       email: "elena@softwareyard.co",
-      linkedin: "#",
-      twitter: "#",
       sortOrder: 2,
     },
     {
@@ -79,8 +99,6 @@ async function main() {
       image: "/team/david.jpg",
       bio: "Expert in React, Node.js, and modern web technologies.",
       email: "david@softwareyard.co",
-      linkedin: "#",
-      github: "#",
       sortOrder: 3,
     },
     {
@@ -89,8 +107,6 @@ async function main() {
       image: "/team/priya.jpg",
       bio: "Agile certified PM with 10+ years delivering complex projects.",
       email: "priya@softwareyard.co",
-      linkedin: "#",
-      twitter: "#",
       sortOrder: 4,
     },
     {
@@ -99,8 +115,6 @@ async function main() {
       image: "/team/james.jpg",
       bio: "Kubernetes and AWS specialist. Automation enthusiast.",
       email: "james@softwareyard.co",
-      linkedin: "#",
-      github: "#",
       sortOrder: 5,
     },
   ];
