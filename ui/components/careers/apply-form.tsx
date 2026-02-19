@@ -32,7 +32,7 @@ function validate(formData: FormData, file: File | null): FieldErrors {
 
   const expectedSalary = (formData.get("expectedSalary") as string)?.trim()
   if (!expectedSalary) {
-    errors.expectedSalary = "Expected gross salary is required"
+    errors.expectedSalary = "Expected net salary is required"
   } else if (!/^\d+$/.test(expectedSalary)) {
     errors.expectedSalary = "Please enter a valid number"
   }
@@ -203,7 +203,7 @@ export function ApplyForm({ jobTitle }: ApplyFormProps) {
         </div>
         <div>
           <label htmlFor="expectedSalary" className="block text-sm font-medium mb-2">
-            Expected Salary (euros) <span className="text-destructive">*</span>
+            Expected Salary(eur) <span className="text-destructive">*</span>
           </label>
           <Input
             id="expectedSalary"

@@ -47,14 +47,70 @@ applicationsRouter.get(
   }
 );
 
+// PROTECTED: Get single application by ID
+applicationsRouter.get(
+  "/:id",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const application = await prisma.jobApplication.findUnique({
+      where: { id: req.params.id as string },
+      include: { role: true },
+    });
+
+    if (!application) {
+      res.status(404).json({ error: "Application not found" });
+      return;
+    }
+
+    res.json(application);
+  }
+);
+
+// PROTECTED: Update notes on an application
+applicationsRouter.patch(
+  "/:id/notes",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const { hrNotes, techNotes } = req.body;
+
+    const application = await prisma.jobApplication.update({
+      where: { id: req.params.id as string },
+      data: { hrNotes, techNotes },
+    });
+
+    res.json(application);
+  }
+);
+
+// PROTECTED: Update interview dates on an application
+applicationsRouter.patch(
+  "/:id/interviews",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const { hrInterviewTime, firstInterviewTime, secondInterviewTime } = req.body;
+
+    const application = await prisma.jobApplication.update({
+      where: { id: req.params.id as string },
+      data: {
+        hrInterviewTime: hrInterviewTime ? new Date(hrInterviewTime) : null,
+        firstInterviewTime: firstInterviewTime ? new Date(firstInterviewTime) : null,
+        secondInterviewTime: secondInterviewTime ? new Date(secondInterviewTime) : null,
+      },
+    });
+
+    res.json(application);
+  }
+);
+
 // PROTECTED: Get all candidate roles (for filter dropdown)
 applicationsRouter.get(
   "/roles",
   requireAuth,
   async (_req: Request, res: Response) => {
-    const roles = await prisma.candidateRole.findMany({
-      orderBy: { name: "asc" },
-    });
+    const roles = await prisma.$queryRaw<{ id: string; name: string }[]>`
+      SELECT id, name FROM candidate_roles
+      ORDER BY CASE WHEN name = 'OTHER' THEN 1 ELSE 0 END, name ASC
+    `;
     res.json(roles);
   }
 );

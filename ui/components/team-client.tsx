@@ -28,13 +28,13 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
       )}
       style={{ animationDelay: `${index * 100}ms` }}
     >
-      <div className="relative overflow-hidden rounded-2xl bg-foreground aspect-square mb-4">
+      <div className="relative overflow-hidden rounded-2xl aspect-square mb-4">
         {member.image && !member.image.includes("placeholder") ? (
           <Image
             src={member.image || "/placeholder.svg"}
             alt={member.name}
             fill
-            className="object-cover"
+            className="object-cover object-top"
           />
         ) : (
           <>

@@ -17,7 +17,7 @@ interface TeamMember {
 async function getTeam(): Promise<TeamMember[]> {
   try {
     const res = await fetch(`${API_URL}/api/team`, {
-      next: { revalidate: 60 },
+      next: { revalidate: process.env.NODE_ENV === "development" ? 0 : 60 },
     })
     if (!res.ok) return []
     return res.json()

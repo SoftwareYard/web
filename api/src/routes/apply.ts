@@ -4,7 +4,7 @@ import multer from "multer";
 import { uploadToBunny } from "../lib/bunny";
 import { mapJobTitleToRole } from "../lib/role-mapper";
 import { prisma } from "../lib/prisma";
-import { grossToNetMK } from "../services/salary.calculator.service";
+import { grossToNetMK, netToGrossMK } from "../services/salary.calculator.service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 export const applyRouter = Router();
@@ -21,13 +21,11 @@ const upload = multer({
   },
 });
 
+// MKD is pegged to EUR by the National Bank of North Macedonia (stable since 1997)
+const EUR_TO_MKD_RATE = 61.3;
+
 async function getEurToMkdRate(): Promise<number> {
-  const res = await fetch(
-    "https://api.frankfurter.app/latest?from=EUR&to=MKD"
-  );
-  if (!res.ok) throw new Error("Failed to fetch EUR/MKD rate");
-  const data = (await res.json()) as { rates: { MKD: number } };
-  return data.rates.MKD;
+  return EUR_TO_MKD_RATE;
 }
 
 applyRouter.post(
@@ -102,23 +100,23 @@ applyRouter.post(
         console.error("Bunny CDN upload error:", uploadError);
       }
 
-      const grossEur = parseInt(expectedSalary, 10);
+      const netEur = parseInt(expectedSalary, 10);
 
       const rate = await getEurToMkdRate();
-      const grossMkd = Math.round(grossEur * rate);
-      const { net: netMkd } = grossToNetMK(grossMkd);
-      const netEur = Math.round(netMkd / rate);
+      const netMkd = Math.round(netEur * rate);
+      const grossMkd = netToGrossMK(netMkd);
+      const { net: verifiedNetMkd } = grossToNetMK(grossMkd);
+      const grossEur = Math.round(grossMkd / rate);
 
       await prisma.jobApplication.create({
         data: {
           fullName,
           phone,
           email,
-          grossSalary: grossEur,
-          salaryGrossEur: grossEur,
-          salaryGrossMkd: grossMkd,
           salaryNetEur: netEur,
-          salaryNetMkd: netMkd,
+          salaryNetMkd: verifiedNetMkd,
+          salaryGrossMkd: grossMkd,
+          salaryGrossEur: grossEur,
           roleId,
           jobTitle,
           cvLink,

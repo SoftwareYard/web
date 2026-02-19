@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { cmsApi } from "@/lib/cms-api";
 import {
@@ -33,7 +34,7 @@ interface JobApplication {
   fullName: string;
   email: string;
   phone: string;
-  grossSalary: number;
+  salaryNetEur: number;
   salaryGrossEur: number;
   jobTitle: string;
   roleId: string | null;
@@ -51,6 +52,7 @@ interface PaginatedResponse {
 }
 
 export default function ApplicationsPage() {
+  const router = useRouter();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [roles, setRoles] = useState<CandidateRole[]>([]);
   const [total, setTotal] = useState(0);
@@ -154,13 +156,14 @@ export default function ApplicationsPage() {
               <TableHead>Full Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Role</TableHead>
+              <TableHead>Net Salary (EUR)</TableHead>
               <TableHead>Gross Salary (EUR)</TableHead>
               <TableHead>HR Interview</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {applications.map((app) => (
-              <TableRow key={app.id}>
+              <TableRow key={app.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/ctrl/applications/${app.id}`)}>
                 <TableCell className="font-medium">{app.fullName}</TableCell>
                 <TableCell>{app.email}</TableCell>
                 <TableCell>
@@ -170,6 +173,7 @@ export default function ApplicationsPage() {
                     <span className="text-muted-foreground">—</span>
                   )}
                 </TableCell>
+                <TableCell>{app.salaryNetEur.toLocaleString()}</TableCell>
                 <TableCell>{app.salaryGrossEur.toLocaleString()}</TableCell>
                 <TableCell>{formatDate(app.hrInterviewTime)}</TableCell>
               </TableRow>
@@ -177,7 +181,7 @@ export default function ApplicationsPage() {
             {applications.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center text-muted-foreground py-8"
                 >
                   No applications found

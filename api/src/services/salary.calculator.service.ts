@@ -1,3 +1,27 @@
+export function netToGrossMK(net: number, personalAllowance = 10932): number {
+    const netContribRate = 1 - (0.188 + 0.075 + 0.012 + 0.005); // 0.72
+
+    // Analytical approximation
+    let approxGross: number;
+    if (net / netContribRate <= personalAllowance) {
+        // No-tax bracket
+        approxGross = Math.round(net / netContribRate);
+    } else {
+        // Taxed bracket: net ≈ grossAfterContrib * 0.90 + personalAllowance * 0.10
+        approxGross = Math.round((net - personalAllowance * 0.10) / (netContribRate * 0.90));
+    }
+
+    // Search ±3 to handle rounding in grossToNetMK
+    for (let delta = -3; delta <= 3; delta++) {
+        const candidate = approxGross + delta;
+        if (grossToNetMK(candidate, personalAllowance).net === net) {
+            return candidate;
+        }
+    }
+
+    return approxGross;
+}
+
 type Breakdown = {
     gross: number;
     pension: number;
@@ -32,7 +56,7 @@ export function grossToNetMK(
     const taxBaseRaw = grossAfterContrib - personalAllowance;
     const taxBase = Math.max(0, taxBaseRaw);
 
-    const tax = Math.round(taxBase * 0.10); // matches 2506.8 -> 2507
+    const tax = Math.round(taxBase * 0.10);
     const net = Math.round(grossAfterContrib - tax);
 
     return {

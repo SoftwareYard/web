@@ -13,9 +13,10 @@ const upload = multer({
 
 // PROTECTED: Get all candidate roles for dropdown
 teamRouter.get("/roles", requireAuth, async (_req: Request, res: Response) => {
-  const roles = await prisma.candidateRole.findMany({
-    orderBy: { name: "asc" },
-  });
+  const roles = await prisma.$queryRaw<{ id: string; name: string }[]>`
+    SELECT id, name FROM candidate_roles
+    ORDER BY CASE WHEN name = 'OTHER' THEN 1 ELSE 0 END, name ASC
+  `;
   res.json(roles);
 });
 

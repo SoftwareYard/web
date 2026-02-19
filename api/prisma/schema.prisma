@@ -124,7 +124,6 @@ model JobApplication {
   fullName            String    @map("full_name")
   phone               String
   email               String
-  grossSalary         Int       @map("gross_salary")
   salaryGrossEur      Int       @map("salary_gross_eur")
   salaryGrossMkd      Int       @map("salary_gross_mkd")
   salaryNetEur        Int       @map("salary_net_eur")
