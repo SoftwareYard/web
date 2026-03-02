@@ -3,8 +3,9 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
-import { TeamForm } from "@/components/ctrl/team-form";
+import { AdminForm } from "@/components/ctrl/admin-form";
 import { cmsApi } from "@/lib/cms-api";
+import { useAuth } from "@/lib/auth";
 import {
   Table,
   TableBody,
@@ -24,67 +25,80 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-interface TeamMember {
+interface AdminUser {
   id: string;
   name: string;
+  email: string;
   role: string;
-  image: string;
-  bio: string;
-  email: string | null;
-  phone: string | null;
-  hireDate: string | null;
-  currentSalaryEur: number | null;
-  nextContractDate: string | null;
-  sortOrder: number;
+  createdAt: string;
 }
 
-export default function TeamPage() {
+export default function AdminsPage() {
+  const { admin } = useAuth();
   const router = useRouter();
-  const [members, setMembers] = useState<TeamMember[]>([]);
+  const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [editing, setEditing] = useState<AdminUser | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
-  const loadMembers = useCallback(async () => {
-    const data = await cmsApi<TeamMember[]>("/api/team");
-    setMembers(data);
+  useEffect(() => {
+    if (admin && admin.role !== "SuperAdmin") {
+      router.replace("/ctrl");
+    }
+  }, [admin, router]);
+
+  const loadAdmins = useCallback(async () => {
+    const data = await cmsApi<AdminUser[]>("/api/admins");
+    setAdmins(data);
   }, []);
 
   useEffect(() => {
-    loadMembers();
-  }, [loadMembers]);
+    if (admin?.role === "SuperAdmin") {
+      loadAdmins();
+    }
+  }, [admin, loadAdmins]);
 
-  const handleCreate = async (formData: FormData) => {
-    const res = await fetch(`${API_URL}/api/team`, {
+  const handleCreate = async (values: { name: string; email: string; password?: string }) => {
+    await cmsApi("/api/admins", {
       method: "POST",
-      credentials: "include",
-      body: formData,
+      body: JSON.stringify(values),
     });
-    if (!res.ok) throw new Error("Failed to create");
-    toast.success("Team member created");
+    toast.success("Admin created");
     setFormOpen(false);
-    loadMembers();
+    loadAdmins();
+  };
+
+  const handleUpdate = async (values: { name: string; email: string; password?: string }) => {
+    if (!editing) return;
+    await cmsApi(`/api/admins/${editing.id}`, {
+      method: "PUT",
+      body: JSON.stringify(values),
+    });
+    toast.success("Admin updated");
+    setEditing(null);
+    loadAdmins();
   };
 
   const handleDelete = async () => {
     if (!deleteId) return;
-    await cmsApi(`/api/team/${deleteId}`, { method: "DELETE" });
-    toast.success("Team member deleted");
+    await cmsApi(`/api/admins/${deleteId}`, { method: "DELETE" });
+    toast.success("Admin deleted");
     setDeleteId(null);
-    loadMembers();
+    loadAdmins();
   };
+
+  if (admin?.role !== "SuperAdmin") return null;
 
   return (
     <CmsShell>
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold">Team Members</h1>
+        <h1 className="text-2xl font-bold">Admins</h1>
         <Button onClick={() => setFormOpen(true)}>
           <Plus className="w-4 h-4 mr-2" />
-          New Member
+          New Admin
         </Button>
       </div>
 
@@ -92,41 +106,36 @@ export default function TeamPage() {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead>Name</TableHead>
+              <TableHead>Full Name</TableHead>
               <TableHead>Email</TableHead>
-              <TableHead>Phone</TableHead>
-              <TableHead>Next Contract Date</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Created</TableHead>
               <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((member) => (
-              <TableRow key={member.id}>
-                <TableCell className="font-medium">{member.name}</TableCell>
+            {admins.map((a) => (
+              <TableRow key={a.id}>
+                <TableCell className="font-medium">{a.name}</TableCell>
+                <TableCell className="text-muted-foreground">{a.email}</TableCell>
+                <TableCell className="text-muted-foreground">{a.role}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {member.email || "—"}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {member.phone || "—"}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {member.nextContractDate
-                    ? new Date(member.nextContractDate).toLocaleDateString()
-                    : "—"}
+                  {new Date(a.createdAt).toLocaleDateString()}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => router.push(`/ctrl/team/${member.id}`)}
+                      onClick={() => setEditing(a)}
                     >
-                      <Eye className="w-4 h-4" />
+                      <Pencil className="w-4 h-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      onClick={() => setDeleteId(member.id)}
+                      onClick={() => setDeleteId(a.id)}
+                      disabled={a.id === admin?.id}
                     >
                       <Trash2 className="w-4 h-4" />
                     </Button>
@@ -134,13 +143,13 @@ export default function TeamPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {members.length === 0 && (
+            {admins.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={5}
                   className="text-center text-muted-foreground py-8"
                 >
-                  No team members yet
+                  No admins yet
                 </TableCell>
               </TableRow>
             )}
@@ -148,10 +157,17 @@ export default function TeamPage() {
         </Table>
       </div>
 
-      <TeamForm
+      <AdminForm
         open={formOpen}
         onOpenChange={setFormOpen}
         onSubmit={handleCreate}
+      />
+
+      <AdminForm
+        open={!!editing}
+        onOpenChange={(open) => !open && setEditing(null)}
+        onSubmit={handleUpdate}
+        defaultValues={editing}
       />
 
       <AlertDialog
@@ -160,16 +176,14 @@ export default function TeamPage() {
       >
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Delete team member?</AlertDialogTitle>
+            <AlertDialogTitle>Delete admin?</AlertDialogTitle>
             <AlertDialogDescription>
               This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete}>
-              Delete
-            </AlertDialogAction>
+            <AlertDialogAction onClick={handleDelete}>Delete</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>

@@ -49,7 +49,7 @@ authRouter.post("/logout", (_req: Request, res: Response) => {
 authRouter.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
   const admin = await prisma.adminUser.findUnique({
     where: { id: req.adminId },
-    select: { id: true, email: true, name: true, role: { select: { name: true } } },
+    include: { role: true },
   });
 
   if (!admin) {
@@ -57,5 +57,5 @@ authRouter.get("/me", requireAuth, async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  res.json({ admin });
+  res.json({ admin: { id: admin.id, email: admin.email, name: admin.name, role: admin.role.name } });
 });

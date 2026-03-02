@@ -48,7 +48,8 @@ const teamSchema = z.object({
   phone: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
-  nextContractDate: z.string().optional(),
+  contractInMonths: z.string().optional(),
+  lastContractDate: z.string().optional(),
   sortOrder: z.coerce.number().default(0),
 });
 
@@ -91,7 +92,8 @@ export function TeamForm({
     phone: "",
     hireDate: "",
     currentSalaryEur: "",
-    nextContractDate: "",
+    contractInMonths: "",
+    lastContractDate: "",
     sortOrder: 0,
   };
 
@@ -105,7 +107,10 @@ export function TeamForm({
     defaults.currentSalaryEur = defaultValues.currentSalaryEur
       ? String(defaultValues.currentSalaryEur)
       : "";
-    defaults.nextContractDate = toDateInputValue(defaultValues.nextContractDate);
+    defaults.contractInMonths = defaultValues.contractInMonths
+      ? String(defaultValues.contractInMonths)
+      : "";
+    defaults.lastContractDate = toDateInputValue(defaultValues.lastContractDate);
     defaults.sortOrder = (defaultValues.sortOrder as number) ?? 0;
   }
 
@@ -123,7 +128,8 @@ export function TeamForm({
     fd.append("phone", values.phone || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
-    fd.append("nextContractDate", values.nextContractDate || "");
+    fd.append("contractInMonths", values.contractInMonths || "");
+    fd.append("lastContractDate", values.lastContractDate || "");
     fd.append("sortOrder", String(values.sortOrder));
     if (imageFile) {
       fd.append("image", imageFile);
@@ -325,16 +331,46 @@ export function TeamForm({
               />
               <FormField
                 control={form.control}
-                name="nextContractDate"
+                name="contractInMonths"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Next Contract</FormLabel>
+                    <FormLabel>Contract (months)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="12" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="lastContractDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Last Contract Date</FormLabel>
                     <FormControl>
                       <Input type="date" {...field} />
                     </FormControl>
                   </FormItem>
                 )}
               />
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Next Contract Date</label>
+                <Input
+                  type="date"
+                  readOnly
+                  value={(() => {
+                    const last = form.watch("lastContractDate");
+                    const months = parseInt(form.watch("contractInMonths") || "");
+                    if (!last || isNaN(months)) return "";
+                    const d = new Date(last);
+                    d.setMonth(d.getMonth() + months);
+                    return d.toISOString().split("T")[0];
+                  })()}
+                  className="bg-muted text-muted-foreground"
+                />
+              </div>
             </div>
             <FormField
               control={form.control}

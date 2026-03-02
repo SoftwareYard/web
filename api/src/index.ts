@@ -8,6 +8,7 @@ import { teamRouter } from "./routes/team";
 import { jobsRouter } from "./routes/jobs";
 import { applyRouter } from "./routes/apply";
 import { applicationsRouter } from "./routes/applications";
+import { adminsRouter } from "./routes/admins";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -22,6 +23,7 @@ app.use("/api/team", teamRouter);
 app.use("/api/jobs", jobsRouter);
 app.use("/api/apply", applyRouter);
 app.use("/api/applications", applicationsRouter);
+app.use("/api/admins", adminsRouter);
 
 
 app.get("/health", (_req, res) => {

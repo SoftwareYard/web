@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
+import { prisma } from "../lib/prisma";
 
 export interface AuthRequest extends Request {
   adminId?: string;
@@ -29,4 +30,22 @@ export function requireAuth(
     res.status(401).json({ error: "Invalid or expired token" });
     return;
   }
+}
+
+export async function requireSuperAdmin(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  const admin = await prisma.adminUser.findUnique({
+    where: { id: req.adminId },
+    include: { role: true },
+  });
+
+  if (!admin || admin.role.name !== "SuperAdmin") {
+    res.status(403).json({ error: "Super admin access required" });
+    return;
+  }
+
+  next();
 }

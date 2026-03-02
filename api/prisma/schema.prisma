@@ -39,6 +39,8 @@ model TeamMember {
   phone            String?
   hireDate         DateTime? @map("hire_date")
   currentSalaryEur Float?    @map("current_salary_eur")
+  contractInMonths Int?      @map("contract_in_months")
+  lastContractDate DateTime? @map("last_contract_date")
   nextContractDate DateTime? @map("next_contract_date")
   sortOrder        Int       @default(0) @map("sort_order")
   createdAt        DateTime  @default(now()) @map("created_at")

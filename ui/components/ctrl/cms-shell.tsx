@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Users, Briefcase, FileText, LogOut } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, FileText, LogOut, ShieldCheck } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AuthGuard } from "./auth-guard";
 import {
@@ -21,16 +21,19 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
-const navItems = [
-  { title: "Dashboard", href: "/ctrl", icon: LayoutDashboard },
-  { title: "Team", href: "/ctrl/team", icon: Users },
-  { title: "Jobs", href: "/ctrl/jobs", icon: Briefcase },
-  { title: "Job Applications", href: "/ctrl/applications", icon: FileText },
-];
-
 export function CmsShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const { admin, logout } = useAuth();
+
+  const navItems = [
+    { title: "Dashboard", href: "/ctrl", icon: LayoutDashboard },
+    { title: "Team", href: "/ctrl/team", icon: Users },
+    { title: "Jobs", href: "/ctrl/jobs", icon: Briefcase },
+    { title: "Job Applications", href: "/ctrl/applications", icon: FileText },
+    ...(admin?.role === "SuperAdmin"
+      ? [{ title: "Admins", href: "/ctrl/admins", icon: ShieldCheck }]
+      : []),
+  ];
 
   return (
     <AuthGuard>

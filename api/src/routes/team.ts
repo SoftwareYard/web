@@ -45,12 +45,20 @@ teamRouter.post(
   requireAuth,
   upload.single("image"),
   async (req: Request, res: Response) => {
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, nextContractDate, sortOrder } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, contractInMonths, lastContractDate, sortOrder } =
       req.body;
 
     let imageUrl = "";
     if (req.file) {
       imageUrl = await uploadToBunny(req.file.buffer, req.file.originalname, "Team");
+    }
+
+    const parsedContractInMonths = contractInMonths ? parseInt(contractInMonths) : null;
+    const parsedLastContractDate = lastContractDate ? new Date(lastContractDate) : null;
+    let computedNextContractDate: Date | null = null;
+    if (parsedLastContractDate && parsedContractInMonths) {
+      computedNextContractDate = new Date(parsedLastContractDate);
+      computedNextContractDate.setMonth(computedNextContractDate.getMonth() + parsedContractInMonths);
     }
 
     const member = await prisma.teamMember.create({
@@ -63,7 +71,9 @@ teamRouter.post(
         phone: phone || null,
         hireDate: hireDate ? new Date(hireDate) : null,
         currentSalaryEur: currentSalaryEur ? parseFloat(currentSalaryEur) : null,
-        nextContractDate: nextContractDate ? new Date(nextContractDate) : null,
+        contractInMonths: parsedContractInMonths,
+        lastContractDate: parsedLastContractDate,
+        nextContractDate: computedNextContractDate,
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
       },
     });
@@ -78,8 +88,16 @@ teamRouter.put(
   upload.single("image"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, nextContractDate, sortOrder } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, contractInMonths, lastContractDate, sortOrder } =
       req.body;
+
+    const parsedContractInMonths = contractInMonths ? parseInt(contractInMonths) : null;
+    const parsedLastContractDate = lastContractDate ? new Date(lastContractDate) : null;
+    let computedNextContractDate: Date | null = null;
+    if (parsedLastContractDate && parsedContractInMonths) {
+      computedNextContractDate = new Date(parsedLastContractDate);
+      computedNextContractDate.setMonth(computedNextContractDate.getMonth() + parsedContractInMonths);
+    }
 
     const data: Record<string, unknown> = {
       name,
@@ -89,7 +107,9 @@ teamRouter.put(
       phone: phone || null,
       hireDate: hireDate ? new Date(hireDate) : null,
       currentSalaryEur: currentSalaryEur ? parseFloat(currentSalaryEur) : null,
-      nextContractDate: nextContractDate ? new Date(nextContractDate) : null,
+      contractInMonths: parsedContractInMonths,
+      lastContractDate: parsedLastContractDate,
+      nextContractDate: computedNextContractDate,
       sortOrder: sortOrder ? parseInt(sortOrder) : 0,
     };
 
@@ -104,6 +124,16 @@ teamRouter.put(
     res.json(member);
   }
 );
+
+// PROTECTED: Get OneOnOne meetings for a team member
+teamRouter.get("/:id/meetings", requireAuth, async (req: Request, res: Response) => {
+  const id = req.params.id as string;
+  const meetings = await prisma.oneOnOneMeeting.findMany({
+    where: { userId: id },
+    orderBy: { date: "desc" },
+  });
+  res.json(meetings);
+});
 
 // PROTECTED: Delete team member
 teamRouter.delete("/:id", requireAuth, async (req: Request, res: Response) => {
