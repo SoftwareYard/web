@@ -30,3 +30,18 @@ export async function uploadToBunny(
 
   return `${cdnUrl}/${path}`;
 }
+
+export async function deleteFromBunny(cdnUrl: string): Promise<void> {
+  const storageZone = process.env.BUNNY_STORAGE_ZONE!;
+  const apiKey = process.env.BUNNY_API_KEY!;
+  const region = process.env.BUNNY_REGION || "storage";
+  const baseCdnUrl = process.env.BUNNY_CDN_URL!;
+
+  const path = cdnUrl.replace(`${baseCdnUrl}/`, "");
+  const deleteUrl = `https://${region}.bunnycdn.com/${storageZone}/${path}`;
+
+  await fetch(deleteUrl, {
+    method: "DELETE",
+    headers: { AccessKey: apiKey },
+  });
+}

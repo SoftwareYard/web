@@ -10,6 +10,10 @@ import { applyRouter } from "./routes/apply";
 import { applicationsRouter } from "./routes/applications";
 import { adminsRouter } from "./routes/admins";
 import { invoicesRouter } from "./routes/invoices";
+import { assetsRouter } from "./routes/assets";
+import { storesRouter } from "./routes/stores";
+import { assetTypesRouter } from "./routes/asset-types";
+import { assetImagesRouter } from "./routes/asset-images";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 
 const app = express();
@@ -27,6 +31,10 @@ app.use("/api/apply", applyRouter);
 app.use("/api/applications", applicationsRouter);
 app.use("/api/admins", adminsRouter);
 app.use("/api/invoices", invoicesRouter);
+app.use("/api/assets", assetsRouter);
+app.use("/api/stores", storesRouter);
+app.use("/api/asset-types", assetTypesRouter);
+app.use("/api/assets/:assetId/images", assetImagesRouter);
 
 
 app.get("/health", (_req, res) => {

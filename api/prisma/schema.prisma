@@ -48,6 +48,7 @@ model TeamMember {
 
   oneOnOneMeetings OneOnOneMeeting[]
   teamContracts    TeamContract[]
+  assets           Asset[]
 
   @@map("team_members")
 }
@@ -119,6 +120,59 @@ model CandidateRole {
   jobApplications JobApplication[]
 
   @@map("candidate_roles")
+}
+
+model Store {
+  id        String   @id @default(cuid())
+  title     String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assets    Asset[]
+
+  @@map("stores")
+}
+
+model AssetImage {
+  id        String   @id @default(cuid())
+  assetId   String   @map("asset_id")
+  asset     Asset    @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  url       String
+  fileName  String   @map("file_name")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("asset_images")
+}
+
+model AssetType {
+  id        String   @id @default(cuid())
+  type      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  assets    Asset[]
+
+  @@map("asset_types")
+}
+
+model Asset {
+  id                  String      @id @default(cuid())
+  storeId             String      @map("store_id")
+  store               Store       @relation(fields: [storeId], references: [id])
+  assetTypeId         String      @map("asset_type_id")
+  assetType           AssetType   @relation(fields: [assetTypeId], references: [id])
+  purchaseDate        DateTime    @map("purchase_date")
+  amount              Float
+  serialNumber        String      @map("serial_number")
+  yearOfManufacture   Int         @map("year_of_manufacture")
+  currentHolderId     String?     @map("current_holder_id")
+  currentHolder       TeamMember? @relation(fields: [currentHolderId], references: [id])
+  createdAt           DateTime    @default(now()) @map("created_at")
+  updatedAt           DateTime    @updatedAt @map("updated_at")
+
+  images              AssetImage[]
+
+  @@map("assets")
 }
 
 model Invoice {
