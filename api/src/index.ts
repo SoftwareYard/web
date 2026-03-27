@@ -9,6 +9,8 @@ import { jobsRouter } from "./routes/jobs";
 import { applyRouter } from "./routes/apply";
 import { applicationsRouter } from "./routes/applications";
 import { adminsRouter } from "./routes/admins";
+import { invoicesRouter } from "./routes/invoices";
+import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -24,6 +26,7 @@ app.use("/api/jobs", jobsRouter);
 app.use("/api/apply", applyRouter);
 app.use("/api/applications", applicationsRouter);
 app.use("/api/admins", adminsRouter);
+app.use("/api/invoices", invoicesRouter);
 
 
 app.get("/health", (_req, res) => {
@@ -32,6 +35,7 @@ app.get("/health", (_req, res) => {
 
 app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);
+  startInvoiceRenewalCron();
 });
 
 

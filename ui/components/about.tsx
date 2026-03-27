@@ -92,7 +92,7 @@ export function AboutSection() {
               About Us
             </span>
             <h2 className="text-4xl md:text-5xl font-bold mt-4 mb-6 text-balance">
-              Building Digital Excellence Since 2016
+              Building Digital Excellence Since 2022
             </h2>
             <p className="text-lg text-muted-foreground mb-8 leading-relaxed">
               SoftwareYard is a dedicated team of developers, designers, and digital 

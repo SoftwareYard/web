@@ -121,6 +121,19 @@ model CandidateRole {
   @@map("candidate_roles")
 }
 
+model Invoice {
+  id          String    @id @default(cuid())
+  issuerTitle String    @map("issuer_title")
+  amount      Float
+  paid        Boolean   @default(false)
+  paidDate    DateTime? @map("paid_date")
+  dueDate     DateTime  @map("due_date")
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  @@map("invoices")
+}
+
 model JobApplication {
   id                  String    @id @default(cuid())
   fullName            String    @map("full_name")
