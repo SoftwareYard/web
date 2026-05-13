@@ -40,14 +40,14 @@ export function AboutSection() {
                 <div className="aspect-[4/5] rounded-3xl bg-gradient-to-br from-foreground/5 to-foreground/10 overflow-hidden">
                   <div className="w-full h-full flex items-center justify-center">
                     <div className="text-center p-6">
-                      <div className="text-6xl font-bold gradient-text">8+</div>
+                      <div className="text-6xl font-bold gradient-text">{new Date().getFullYear() - 2022}+</div>
                       <div className="text-sm text-muted-foreground mt-2">Years of Excellence</div>
                     </div>
                   </div>
                 </div>
                 <div className="aspect-square rounded-3xl bg-gradient-to-br from-accent/20 to-accent/5 flex items-center justify-center">
                   <div className="text-center p-6">
-                    <div className="text-4xl font-bold">50+</div>
+                    <div className="text-4xl font-bold">20+</div>
                     <div className="text-sm text-muted-foreground mt-1">Team Members</div>
                   </div>
                 </div>

@@ -165,21 +165,20 @@ export function JobForm({
 }: JobFormProps) {
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobSchema),
-    defaultValues: defaultValues
-      ? toFormValues(defaultValues)
-      : {
-          title: "",
-          slug: "",
-          department: "",
-          location: "",
-          type: "Full-time",
-          description: "",
-          requirements: [{ value: "" }],
-          responsibilities: [{ value: "" }],
-          benefits: [{ value: "" }],
-          postedDate: new Date().toISOString().split("T")[0],
-          isActive: true,
-        },
+    defaultValues: {
+      title: "",
+      slug: "",
+      department: "",
+      location: "",
+      type: "Full-time",
+      description: "",
+      requirements: [{ value: "" }],
+      responsibilities: [{ value: "" }],
+      benefits: [{ value: "" }],
+      postedDate: new Date().toISOString().split("T")[0],
+      isActive: true,
+    },
+    values: defaultValues ? toFormValues(defaultValues) : undefined,
   });
 
   const handleSubmit = async (values: JobFormValues) => {

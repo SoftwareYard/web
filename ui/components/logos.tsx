@@ -5,10 +5,11 @@ const logos = [
   "VSC",
   "DevYard",
   "TechFlow",
-  "DataSync",
-  "CloudNine",
-  "InnovateTech",
-  "DigitalEdge",
+  "ECS",
+  "PluseHeat",
+  "Uncought",
+  "2UpDigital",
+  "Hunch",
 ]
 
 export function LogosSection() {

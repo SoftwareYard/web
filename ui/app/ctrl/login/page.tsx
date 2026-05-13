@@ -15,8 +15,6 @@ import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { login, admin } = useAuth();
@@ -27,12 +25,15 @@ export default function LoginPage() {
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.SyntheticEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const form = e.currentTarget;
+    const emailValue = form.querySelector<HTMLInputElement>('input[name="email"]')?.value ?? "";
+    const passwordValue = form.querySelector<HTMLInputElement>('input[name="password"]')?.value ?? "";
     setLoading(true);
     setError("");
     try {
-      await login(email, password);
+      await login(emailValue, passwordValue);
       router.replace("/ctrl");
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Login failed");
@@ -53,10 +54,10 @@ export default function LoginPage() {
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
-                type="email"
+                name="email"
+                type="text"
+                autoComplete="email"
                 placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
                 required
               />
             </div>
@@ -64,10 +65,9 @@ export default function LoginPage() {
               <Label htmlFor="password">Password</Label>
               <Input
                 id="password"
+                name="password"
                 type="password"
                 placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
                 required
               />
             </div>

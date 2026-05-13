@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, useMemo } from "react";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { InvoiceForm, InvoiceFormValues } from "@/components/ctrl/invoice-form";
@@ -41,7 +41,7 @@ interface Invoice {
   updatedAt: string;
 }
 
-export default function InvoicesPage() {
+function InvoicesPageInner() {
   const searchParams = useSearchParams();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [formOpen, setFormOpen] = useState(false);
@@ -269,12 +269,14 @@ export default function InvoicesPage() {
         onSubmit={handleCreate}
       />
 
-      <InvoiceForm
-        open={!!editing}
-        onOpenChange={(open) => !open && setEditing(null)}
-        onSubmit={handleUpdate}
-        defaultValues={editing}
-      />
+      {editing && (
+        <InvoiceForm
+          open={true}
+          onOpenChange={(open) => !open && setEditing(null)}
+          onSubmit={handleUpdate}
+          defaultValues={editing}
+        />
+      )}
 
       <AlertDialog
         open={!!deleteId}
@@ -294,5 +296,13 @@ export default function InvoicesPage() {
         </AlertDialogContent>
       </AlertDialog>
     </CmsShell>
+  );
+}
+
+export default function InvoicesPage() {
+  return (
+    <Suspense>
+      <InvoicesPageInner />
+    </Suspense>
   );
 }

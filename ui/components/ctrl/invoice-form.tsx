@@ -56,7 +56,13 @@ export function InvoiceForm({
 }: InvoiceFormProps) {
   const form = useForm<InvoiceFormValues>({
     resolver: zodResolver(invoiceSchema),
-    defaultValues: defaultValues
+    defaultValues: {
+      issuerTitle: "",
+      amount: 0,
+      paid: false,
+      paidDate: "",
+    },
+    values: defaultValues
       ? {
           issuerTitle: defaultValues.issuerTitle,
           amount: defaultValues.amount,
@@ -65,12 +71,7 @@ export function InvoiceForm({
             ? defaultValues.paidDate.split("T")[0]
             : "",
         }
-      : {
-          issuerTitle: "",
-          amount: 0,
-          paid: false,
-          paidDate: "",
-        },
+      : undefined,
   });
 
   const handleSubmit = async (values: InvoiceFormValues) => {

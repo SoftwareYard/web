@@ -7,15 +7,16 @@ import { requireAuth, AuthRequest } from "../middleware/auth";
 export const authRouter = Router();
 
 authRouter.post("/login", async (req: Request, res: Response) => {
-  const { email, password } = req.body;
+  const { email, username, password } = req.body;
+  const loginEmail = email || username;
 
-  if (!email || !password) {
+  if (!loginEmail || !password) {
     res.status(400).json({ error: "Email and password are required" });
     return;
   }
 
   const admin = await prisma.adminUser.findUnique({
-    where: { email },
+    where: { email: loginEmail },
     include: { role: true },
   });
   if (!admin || !(await bcrypt.compare(password, admin.password))) {

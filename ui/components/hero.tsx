@@ -65,8 +65,8 @@ export function Hero() {
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 animate-fade-in-up animation-delay-400">
             {[
               { value: "150+", label: "Projects Delivered" },
-              { value: "50+", label: "Happy Clients" },
-              { value: "8+", label: "Years Experience" },
+              { value: "10+", label: "Happy Clients" },
+              { value: "4+", label: "Years Experience" },
               { value: "99%", label: "Client Satisfaction" },
             ].map((stat) => (
               <div key={stat.label} className="text-center">

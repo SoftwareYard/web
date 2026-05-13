@@ -162,12 +162,14 @@ export default function JobsPage() {
         onSubmit={handleCreate}
       />
 
-      <JobForm
-        open={!!editing}
-        onOpenChange={(open) => !open && setEditing(null)}
-        onSubmit={handleUpdate}
-        defaultValues={editing}
-      />
+      {editing && (
+        <JobForm
+          open={true}
+          onOpenChange={(open) => !open && setEditing(null)}
+          onSubmit={handleUpdate}
+          defaultValues={editing}
+        />
+      )}
 
       <AlertDialog
         open={!!deleteId}
