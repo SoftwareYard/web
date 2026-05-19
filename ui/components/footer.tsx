@@ -24,9 +24,9 @@ const footerLinks = {
 }
 
 const socialLinks = [
-  { icon: Facebook, label: "Facebook", href: "#" },
-  { icon: Instagram, label: "Instagram", href: "#" },
-  { icon: Linkedin, label: "LinkedIn", href: "#" },
+  { icon: Facebook, label: "Facebook", href: "https://www.facebook.com/softwareyardmk" },
+  { icon: Instagram, label: "Instagram", href: "https://www.instagram.com/softwareyard/?hl=en" },
+  { icon: Linkedin, label: "LinkedIn", href: "https://www.linkedin.com/company/software-yard/" },
 ]
 
 export function Footer() {

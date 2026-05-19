@@ -4,7 +4,7 @@ import { LogosSection } from "@/components/logos"
 import { ServicesSection } from "@/components/services"
 import { AboutSection } from "@/components/about"
 import { ProcessSection } from "@/components/process"
-import { TechStackSection } from "@/components/tech-stack"
+import { WhatWeEngineerSection } from "@/components/what-we-engineer"
 import { TeamSection } from "@/components/team"
 import { TestimonialsSection } from "@/components/testimonials"
 import { CTASection } from "@/components/cta"
@@ -20,7 +20,7 @@ export default async function Home() {
       <ServicesSection />
       <AboutSection />
       <ProcessSection />
-      <TechStackSection />
+      <WhatWeEngineerSection />
       <TeamSection />
       <TestimonialsSection />
       <CTASection />

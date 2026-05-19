@@ -6,7 +6,7 @@ const logos = [
   "DevYard",
   "TechFlow",
   "ECS",
-  "PluseHeat",
+  "PlusHeat",
   "Uncought",
   "2UpDigital",
   "Hunch",

@@ -128,13 +128,19 @@ export function ContactSection() {
 
             {/* Social links */}
             <div className="flex gap-4 mt-10">
-              {["LinkedIn", "Facebook", "Instagram"].map((social) => (
+              {[
+                { label: "LinkedIn", href: "https://www.linkedin.com/company/software-yard/" },
+                { label: "Facebook", href: "https://www.facebook.com/softwareyardmk" },
+                { label: "Instagram", href: "https://www.instagram.com/softwareyard/?hl=en" },
+              ].map((social) => (
                 <a
-                  key={social}
-                  href="#"
+                  key={social.label}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
                   className="px-4 py-2 text-sm font-medium bg-secondary rounded-full hover:bg-foreground hover:text-background transition-colors"
                 >
-                  {social}
+                  {social.label}
                 </a>
               ))}
             </div>
