@@ -11,7 +11,10 @@ services:
       - app-net
 
   ui:
-    build: ./ui
+    build:
+      context: ./ui
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
     restart: unless-stopped
     env_file: ./ui/.env.production
     ports:
