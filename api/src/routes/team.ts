@@ -135,6 +135,42 @@ teamRouter.get("/:id/meetings", requireAuth, async (req: Request, res: Response)
   res.json(meetings);
 });
 
+// PROTECTED: Create OneOnOne meeting for a team member
+teamRouter.post("/:id/meetings", requireAuth, async (req: Request, res: Response) => {
+  const userId = req.params.id as string;
+  const {
+    date,
+    feelingAtWork,
+    currentWorkload,
+    thingsOutsideWork,
+    problemsWithClient,
+    problemsWithTeam,
+    skillsToDevelop,
+    growingInRole,
+    trainingOpportunities,
+    anythingElse,
+    improvementSuggestions,
+  } = req.body;
+
+  const meeting = await prisma.oneOnOneMeeting.create({
+    data: {
+      userId,
+      date: new Date(date),
+      feelingAtWork: feelingAtWork || null,
+      currentWorkload: currentWorkload || null,
+      thingsOutsideWork: thingsOutsideWork || null,
+      problemsWithClient: problemsWithClient || null,
+      problemsWithTeam: problemsWithTeam || null,
+      skillsToDevelop: skillsToDevelop || null,
+      growingInRole: growingInRole || null,
+      trainingOpportunities: trainingOpportunities || null,
+      anythingElse: anythingElse || null,
+      improvementSuggestions: improvementSuggestions || null,
+    },
+  });
+  res.status(201).json(meeting);
+});
+
 // PROTECTED: Delete team member
 teamRouter.delete("/:id", requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;

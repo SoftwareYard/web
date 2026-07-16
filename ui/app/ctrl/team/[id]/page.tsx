@@ -7,7 +7,14 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import Image from "next/image";
 import { CmsShell } from "@/components/ctrl/cms-shell";
+import { MeetingForm, MeetingFormValues } from "@/components/ctrl/meeting-form";
 import { cmsApi } from "@/lib/cms-api";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Form,
   FormControl,
@@ -34,7 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, Upload, X } from "lucide-react";
+import { ChevronLeft, Loader2, Plus, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -107,6 +114,51 @@ function formatDate(val: string | null) {
   });
 }
 
+const MEETING_FIELDS: { key: keyof Meeting; label: string }[] = [
+  { key: "feelingAtWork", label: "Feeling at Work" },
+  { key: "currentWorkload", label: "Current Workload" },
+  { key: "thingsOutsideWork", label: "Things Outside Work" },
+  { key: "problemsWithClient", label: "Problems with Client" },
+  { key: "problemsWithTeam", label: "Problems with Team" },
+  { key: "skillsToDevelop", label: "Skills to Develop" },
+  { key: "growingInRole", label: "Growing in Role" },
+  { key: "trainingOpportunities", label: "Training Opportunities" },
+  { key: "improvementSuggestions", label: "Improvement Suggestions" },
+  { key: "anythingElse", label: "Anything Else" },
+];
+
+function MeetingDetailDialog({
+  meeting,
+  onOpenChange,
+}: {
+  meeting: Meeting | null;
+  onOpenChange: (open: boolean) => void;
+}) {
+  return (
+    <Dialog open={!!meeting} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>1-on-1 Meeting — {meeting ? formatDate(meeting.date) : ""}</DialogTitle>
+        </DialogHeader>
+        {meeting && (
+          <div className="space-y-4">
+            {MEETING_FIELDS.map(({ key, label }) => (
+              <div key={key}>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-1">
+                  {label}
+                </p>
+                <p className="text-sm whitespace-pre-wrap">
+                  {(meeting[key] as string | null) || "—"}
+                </p>
+              </div>
+            ))}
+          </div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function PreviewCard({ member }: { member: TeamMember }) {
   return (
     <div className="flex gap-6 items-start">
@@ -153,6 +205,8 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
+  const [meetingFormOpen, setMeetingFormOpen] = useState(false);
+  const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(teamSchema),
@@ -223,6 +277,16 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     toast.success("Saved");
     setImageFile(null);
     setFileName("");
+    loadData();
+  };
+
+  const handleCreateMeeting = async (values: MeetingFormValues) => {
+    await cmsApi(`/api/team/${id}/meetings`, {
+      method: "POST",
+      body: JSON.stringify(values),
+    });
+    toast.success("Meeting created");
+    setMeetingFormOpen(false);
     loadData();
   };
 
@@ -483,9 +547,15 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
 
         {/* 1-on-1 Meetings */}
         <div className="border rounded-lg p-5">
-          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
-            1-on-1 Meetings
-          </h2>
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              1-on-1 Meetings
+            </h2>
+            <Button size="sm" onClick={() => setMeetingFormOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              New Meeting
+            </Button>
+          </div>
           {meetings.length === 0 ? (
             <p className="text-sm text-muted-foreground">No meetings recorded yet.</p>
           ) : (
@@ -501,7 +571,11 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
               </TableHeader>
               <TableBody>
                 {meetings.map((m) => (
-                  <TableRow key={m.id}>
+                  <TableRow
+                    key={m.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedMeeting(m)}
+                  >
                     <TableCell className="whitespace-nowrap">{formatDate(m.date)}</TableCell>
                     <TableCell className="text-muted-foreground">{m.feelingAtWork || "—"}</TableCell>
                     <TableCell className="text-muted-foreground">{m.currentWorkload || "—"}</TableCell>
@@ -514,6 +588,16 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
           )}
         </div>
       </div>
+
+      <MeetingForm
+        open={meetingFormOpen}
+        onOpenChange={setMeetingFormOpen}
+        onSubmit={handleCreateMeeting}
+      />
+      <MeetingDetailDialog
+        meeting={selectedMeeting}
+        onOpenChange={(open) => !open && setSelectedMeeting(null)}
+      />
     </CmsShell>
   );
 }
