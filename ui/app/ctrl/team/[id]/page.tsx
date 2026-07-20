@@ -322,7 +322,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
         Back
       </Button>
 
-      <div className="grid gap-6">
+      <div className="grid grid-cols-1 gap-6">
         {/* Preview */}
         <div className="border rounded-lg p-5">
           <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
@@ -465,7 +465,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                 />
               </div>
 
-              <div className="grid sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField
                   control={form.control}
                   name="hireDate"
@@ -516,7 +516,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                 />
               </div>
 
-              <div className="grid sm:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField
                   control={form.control}
                   name="lastContractDate"
