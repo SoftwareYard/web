@@ -48,6 +48,7 @@ const teamSchema = z.object({
   phone: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
+  currentSalaryGross: z.string().optional(),
   contractInMonths: z.string().optional(),
   lastContractDate: z.string().optional(),
   sortOrder: z.coerce.number().default(0),
@@ -92,6 +93,7 @@ export function TeamForm({
     phone: "",
     hireDate: "",
     currentSalaryEur: "",
+    currentSalaryGross: "",
     contractInMonths: "",
     lastContractDate: "",
     sortOrder: 0,
@@ -106,6 +108,9 @@ export function TeamForm({
     defaults.hireDate = toDateInputValue(defaultValues.hireDate);
     defaults.currentSalaryEur = defaultValues.currentSalaryEur
       ? String(defaultValues.currentSalaryEur)
+      : "";
+    defaults.currentSalaryGross = defaultValues.currentSalaryGross
+      ? String(defaultValues.currentSalaryGross)
       : "";
     defaults.contractInMonths = defaultValues.contractInMonths
       ? String(defaultValues.contractInMonths)
@@ -128,6 +133,7 @@ export function TeamForm({
     fd.append("phone", values.phone || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
+    fd.append("currentSalaryGross", values.currentSalaryGross || "");
     fd.append("contractInMonths", values.contractInMonths || "");
     fd.append("lastContractDate", values.lastContractDate || "");
     fd.append("sortOrder", String(values.sortOrder));
@@ -300,7 +306,7 @@ export function TeamForm({
                 )}
               />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <FormField
                 control={form.control}
                 name="hireDate"
@@ -315,10 +321,24 @@ export function TeamForm({
               />
               <FormField
                 control={form.control}
+                name="contractInMonths"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Contract (months)</FormLabel>
+                    <FormControl>
+                      <Input type="number" placeholder="12" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
                 name="currentSalaryEur"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Current Salary (EUR)</FormLabel>
+                    <FormLabel>Current Salary Net (EUR)</FormLabel>
                     <FormControl>
                       <Input
                         type="number"
@@ -331,12 +351,16 @@ export function TeamForm({
               />
               <FormField
                 control={form.control}
-                name="contractInMonths"
+                name="currentSalaryGross"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Contract (months)</FormLabel>
+                    <FormLabel>Current Salary Gross (EUR)</FormLabel>
                     <FormControl>
-                      <Input type="number" placeholder="12" {...field} />
+                      <Input
+                        type="number"
+                        placeholder="0"
+                        {...field}
+                      />
                     </FormControl>
                   </FormItem>
                 )}

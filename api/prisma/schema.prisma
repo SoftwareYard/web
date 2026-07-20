@@ -30,21 +30,22 @@ model AdminUser {
 }
 
 model TeamMember {
-  id               String    @id @default(cuid())
-  name             String
-  role             String
-  image            String    @default("")
-  bio              String    @default("")
-  email            String?
-  phone            String?
-  hireDate         DateTime? @map("hire_date")
-  currentSalaryEur Float?    @map("current_salary_eur")
-  contractInMonths Int?      @map("contract_in_months")
-  lastContractDate DateTime? @map("last_contract_date")
-  nextContractDate DateTime? @map("next_contract_date")
-  sortOrder        Int       @default(0) @map("sort_order")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  id                 String    @id @default(cuid())
+  name               String
+  role               String
+  image              String    @default("")
+  bio                String    @default("")
+  email              String?
+  phone              String?
+  hireDate           DateTime? @map("hire_date")
+  currentSalaryEur   Float?    @map("current_salary_eur")
+  currentSalaryGross Float?    @map("current_salary_gross")
+  contractInMonths   Int?      @map("contract_in_months")
+  lastContractDate   DateTime? @map("last_contract_date")
+  nextContractDate   DateTime? @map("next_contract_date")
+  sortOrder          Int       @default(0) @map("sort_order")
+  createdAt          DateTime  @default(now()) @map("created_at")
+  updatedAt          DateTime  @updatedAt @map("updated_at")
 
   oneOnOneMeetings OneOnOneMeeting[]
   teamContracts    TeamContract[]
@@ -61,35 +62,35 @@ model ContractType {
 }
 
 model OneOnOneMeeting {
-  id                    String   @id @default(cuid())
-  userId                String   @map("user_id")
-  user                  TeamMember @relation(fields: [userId], references: [id])
-  date                  DateTime
-  feelingAtWork         String?  @map("feeling_at_work")
-  thingsOutsideWork     String?  @map("things_outside_work")
-  currentWorkload       String?  @map("current_workload")
-  problemsWithClient    String?  @map("problems_with_client")
-  problemsWithTeam      String?  @map("problems_with_team")
-  skillsToDevelop       String?  @map("skills_to_develop")
-  growingInRole         String?  @map("growing_in_role")
-  trainingOpportunities String?  @map("training_opportunities")
-  anythingElse          String?  @map("anything_else")
-  improvementSuggestions String? @map("improvement_suggestions")
-  createdAt             DateTime @default(now()) @map("created_at")
-  updatedAt             DateTime @updatedAt @map("updated_at")
+  id                     String     @id @default(cuid())
+  userId                 String     @map("user_id")
+  user                   TeamMember @relation(fields: [userId], references: [id])
+  date                   DateTime
+  feelingAtWork          String?    @map("feeling_at_work")
+  thingsOutsideWork      String?    @map("things_outside_work")
+  currentWorkload        String?    @map("current_workload")
+  problemsWithClient     String?    @map("problems_with_client")
+  problemsWithTeam       String?    @map("problems_with_team")
+  skillsToDevelop        String?    @map("skills_to_develop")
+  growingInRole          String?    @map("growing_in_role")
+  trainingOpportunities  String?    @map("training_opportunities")
+  anythingElse           String?    @map("anything_else")
+  improvementSuggestions String?    @map("improvement_suggestions")
+  createdAt              DateTime   @default(now()) @map("created_at")
+  updatedAt              DateTime   @updatedAt @map("updated_at")
 
   @@map("one_on_one_meetings")
 }
 
 model TeamContract {
-  id            String   @id @default(cuid())
-  userId        String   @map("user_id")
+  id            String     @id @default(cuid())
+  userId        String     @map("user_id")
   user          TeamMember @relation(fields: [userId], references: [id])
-  currentSalary Float    @map("current_salary")
-  nextSalary    Float?   @map("next_salary")
-  signDate      DateTime @map("sign_date")
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
+  currentSalary Float      @map("current_salary")
+  nextSalary    Float?     @map("next_salary")
+  signDate      DateTime   @map("sign_date")
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
 
   @@map("team_contracts")
 }
@@ -128,7 +129,7 @@ model Store {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  assets    Asset[]
+  assets Asset[]
 
   @@map("stores")
 }
@@ -150,27 +151,27 @@ model AssetType {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  assets    Asset[]
+  assets Asset[]
 
   @@map("asset_types")
 }
 
 model Asset {
-  id                  String      @id @default(cuid())
-  storeId             String      @map("store_id")
-  store               Store       @relation(fields: [storeId], references: [id])
-  assetTypeId         String      @map("asset_type_id")
-  assetType           AssetType   @relation(fields: [assetTypeId], references: [id])
-  purchaseDate        DateTime    @map("purchase_date")
-  amount              Float
-  serialNumber        String      @map("serial_number")
-  yearOfManufacture   Int         @map("year_of_manufacture")
-  currentHolderId     String?     @map("current_holder_id")
-  currentHolder       TeamMember? @relation(fields: [currentHolderId], references: [id])
-  createdAt           DateTime    @default(now()) @map("created_at")
-  updatedAt           DateTime    @updatedAt @map("updated_at")
+  id                String      @id @default(cuid())
+  storeId           String      @map("store_id")
+  store             Store       @relation(fields: [storeId], references: [id])
+  assetTypeId       String      @map("asset_type_id")
+  assetType         AssetType   @relation(fields: [assetTypeId], references: [id])
+  purchaseDate      DateTime    @map("purchase_date")
+  amount            Float
+  serialNumber      String      @map("serial_number")
+  yearOfManufacture Int         @map("year_of_manufacture")
+  currentHolderId   String?     @map("current_holder_id")
+  currentHolder     TeamMember? @relation(fields: [currentHolderId], references: [id])
+  createdAt         DateTime    @default(now()) @map("created_at")
+  updatedAt         DateTime    @updatedAt @map("updated_at")
 
-  images              AssetImage[]
+  images AssetImage[]
 
   @@map("assets")
 }
@@ -189,26 +190,26 @@ model Invoice {
 }
 
 model JobApplication {
-  id                  String    @id @default(cuid())
-  fullName            String    @map("full_name")
+  id                  String         @id @default(cuid())
+  fullName            String         @map("full_name")
   phone               String
   email               String
-  salaryGrossEur      Int       @map("salary_gross_eur")
-  salaryGrossMkd      Int       @map("salary_gross_mkd")
-  salaryNetEur        Int       @map("salary_net_eur")
-  salaryNetMkd        Int       @map("salary_net_mkd")
-  roleId              String?   @map("role_id")
+  salaryGrossEur      Int            @map("salary_gross_eur")
+  salaryGrossMkd      Int            @map("salary_gross_mkd")
+  salaryNetEur        Int            @map("salary_net_eur")
+  salaryNetMkd        Int            @map("salary_net_mkd")
+  roleId              String?        @map("role_id")
   role                CandidateRole? @relation(fields: [roleId], references: [id])
-  jobTitle            String    @map("job_title")
-  cvLink              String    @map("cv_link")
-  taskLink            String?   @map("task_link")
-  hrInterviewTime     DateTime? @map("hr_interview_time")
-  firstInterviewTime  DateTime? @map("first_interview_time")
-  secondInterviewTime DateTime? @map("second_interview_time")
-  hrNotes             String?   @map("hr_notes")
-  techNotes           String?   @map("tech_notes")
-  createdAt           DateTime  @default(now()) @map("created_at")
-  updatedAt           DateTime  @updatedAt @map("updated_at")
+  jobTitle            String         @map("job_title")
+  cvLink              String         @map("cv_link")
+  taskLink            String?        @map("task_link")
+  hrInterviewTime     DateTime?      @map("hr_interview_time")
+  firstInterviewTime  DateTime?      @map("first_interview_time")
+  secondInterviewTime DateTime?      @map("second_interview_time")
+  hrNotes             String?        @map("hr_notes")
+  techNotes           String?        @map("tech_notes")
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
 
   @@map("job_applications")
 }

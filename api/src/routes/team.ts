@@ -45,7 +45,7 @@ teamRouter.post(
   requireAuth,
   upload.single("image"),
   async (req: Request, res: Response) => {
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, contractInMonths, lastContractDate, sortOrder } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder } =
       req.body;
 
     let imageUrl = "";
@@ -71,6 +71,7 @@ teamRouter.post(
         phone: phone || null,
         hireDate: hireDate ? new Date(hireDate) : null,
         currentSalaryEur: currentSalaryEur ? parseFloat(currentSalaryEur) : null,
+        currentSalaryGross: currentSalaryGross ? parseFloat(currentSalaryGross) : null,
         contractInMonths: parsedContractInMonths,
         lastContractDate: parsedLastContractDate,
         nextContractDate: computedNextContractDate,
@@ -88,7 +89,7 @@ teamRouter.put(
   upload.single("image"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, contractInMonths, lastContractDate, sortOrder } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder } =
       req.body;
 
     const parsedContractInMonths = contractInMonths ? parseInt(contractInMonths) : null;
@@ -107,6 +108,7 @@ teamRouter.put(
       phone: phone || null,
       hireDate: hireDate ? new Date(hireDate) : null,
       currentSalaryEur: currentSalaryEur ? parseFloat(currentSalaryEur) : null,
+      currentSalaryGross: currentSalaryGross ? parseFloat(currentSalaryGross) : null,
       contractInMonths: parsedContractInMonths,
       lastContractDate: parsedLastContractDate,
       nextContractDate: computedNextContractDate,

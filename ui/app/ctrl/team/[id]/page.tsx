@@ -56,6 +56,7 @@ interface TeamMember {
   phone: string | null;
   hireDate: string | null;
   currentSalaryEur: number | null;
+  currentSalaryGross: number | null;
   contractInMonths: number | null;
   lastContractDate: string | null;
   nextContractDate: string | null;
@@ -91,6 +92,7 @@ const teamSchema = z.object({
   phone: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
+  currentSalaryGross: z.string().optional(),
   contractInMonths: z.string().optional(),
   lastContractDate: z.string().optional(),
   sortOrder: z.coerce.number().default(0),
@@ -184,7 +186,10 @@ function PreviewCard({ member }: { member: TeamMember }) {
           {member.phone && <span>{member.phone}</span>}
           {member.hireDate && <span>Hired {formatDate(member.hireDate)}</span>}
           {member.currentSalaryEur && (
-            <span>{member.currentSalaryEur.toLocaleString()} EUR</span>
+            <span>{member.currentSalaryEur.toLocaleString()} EUR net</span>
+          )}
+          {member.currentSalaryGross && (
+            <span>{member.currentSalaryGross.toLocaleString()} EUR gross</span>
           )}
           {member.nextContractDate && (
             <span>Next contract {formatDate(member.nextContractDate)}</span>
@@ -218,6 +223,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       phone: "",
       hireDate: "",
       currentSalaryEur: "",
+      currentSalaryGross: "",
       contractInMonths: "",
       lastContractDate: "",
       sortOrder: 0,
@@ -241,6 +247,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       phone: m.phone ?? "",
       hireDate: toDateInputValue(m.hireDate),
       currentSalaryEur: m.currentSalaryEur != null ? String(m.currentSalaryEur) : "",
+      currentSalaryGross: m.currentSalaryGross != null ? String(m.currentSalaryGross) : "",
       contractInMonths: m.contractInMonths != null ? String(m.contractInMonths) : "",
       lastContractDate: toDateInputValue(m.lastContractDate),
       sortOrder: m.sortOrder,
@@ -260,6 +267,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     fd.append("phone", values.phone || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
+    fd.append("currentSalaryGross", values.currentSalaryGross || "");
     fd.append("contractInMonths", values.contractInMonths || "");
     fd.append("lastContractDate", values.lastContractDate || "");
     fd.append("sortOrder", String(values.sortOrder));
@@ -475,7 +483,19 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                   name="currentSalaryEur"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Salary (EUR)</FormLabel>
+                      <FormLabel>Salary Net (EUR)</FormLabel>
+                      <FormControl>
+                        <Input type="number" placeholder="0" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="currentSalaryGross"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Salary Gross (EUR)</FormLabel>
                       <FormControl>
                         <Input type="number" placeholder="0" {...field} />
                       </FormControl>
@@ -494,6 +514,9 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                     </FormItem>
                   )}
                 />
+              </div>
+
+              <div className="grid sm:grid-cols-4 gap-4">
                 <FormField
                   control={form.control}
                   name="lastContractDate"
@@ -506,9 +529,6 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                     </FormItem>
                   )}
                 />
-              </div>
-
-              <div className="grid sm:grid-cols-4 gap-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Next Contract Date</label>
                   <Input
