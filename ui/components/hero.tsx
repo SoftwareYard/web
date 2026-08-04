@@ -1,8 +1,6 @@
 "use client"
 
 import { useEffect, useRef } from "react"
-import { ArrowRight, Play } from "lucide-react"
-import { Button } from "@/components/ui/button"
 
 export function Hero() {
   const containerRef = useRef<HTMLDivElement>(null)
@@ -48,18 +46,6 @@ export function Hero() {
             Transform your ideas into powerful digital experiences. We build scalable, 
             user-friendly applications that drive growth and innovation.
           </p>
-
-          {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-300">
-            <Button size="lg" className="rounded-full px-8 gap-2 group">
-              Start Your Project
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-            </Button>
-            <Button size="lg" variant="outline" className="rounded-full px-8 gap-2 bg-transparent">
-              <Play className="w-4 h-4" />
-              Watch Demo
-            </Button>
-          </div>
 
           {/* Stats */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 animate-fade-in-up animation-delay-400">

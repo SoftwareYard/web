@@ -20,12 +20,17 @@ teamRouter.get("/roles", requireAuth, async (_req: Request, res: Response) => {
   res.json(roles);
 });
 
+function omitInvoiceValue<T extends { invoiceValue?: number | null }>(member: T) {
+  const { invoiceValue, ...rest } = member;
+  return rest;
+}
+
 // PUBLIC: Get all team members
 teamRouter.get("/", async (_req: Request, res: Response) => {
   const members = await prisma.teamMember.findMany({
     orderBy: { sortOrder: "asc" },
   });
-  res.json(members);
+  res.json(members.map(omitInvoiceValue));
 });
 
 // PROTECTED: Get single team member
@@ -36,7 +41,7 @@ teamRouter.get("/:id", requireAuth, async (req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  res.json(member);
+  res.json(omitInvoiceValue(member));
 });
 
 // PROTECTED: Create team member
@@ -78,7 +83,7 @@ teamRouter.post(
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
       },
     });
-    res.status(201).json(member);
+    res.status(201).json(omitInvoiceValue(member));
   }
 );
 
@@ -123,7 +128,7 @@ teamRouter.put(
       where: { id },
       data,
     });
-    res.json(member);
+    res.json(omitInvoiceValue(member));
   }
 );
 

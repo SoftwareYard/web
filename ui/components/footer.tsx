@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Facebook, Instagram, Linkedin, ArrowUpRight } from "lucide-react"
+import { Facebook, Instagram, Linkedin } from "lucide-react"
 
 const footerLinks = {
   services: [
@@ -112,34 +112,6 @@ export function Footer() {
                 </li>
               ))}
             </ul>
-          </div>
-        </div>
-
-        {/* Newsletter */}
-        <div className="py-12 border-b border-background/10">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div>
-              <h4 className="font-semibold text-background mb-2">
-                Subscribe to our newsletter
-              </h4>
-              <p className="text-background/60 text-sm">
-                Get the latest updates and insights delivered to your inbox.
-              </p>
-            </div>
-            <form className="flex gap-3">
-              <input
-                type="email"
-                placeholder="Enter your email"
-                className="px-4 py-3 rounded-full bg-background/10 border border-background/20 text-background placeholder:text-background/40 focus:outline-none focus:border-background/40 w-64"
-              />
-              <button
-                type="submit"
-                className="px-6 py-3 rounded-full bg-background text-foreground font-medium hover:bg-background/90 transition-colors flex items-center gap-2"
-              >
-                Subscribe
-                <ArrowUpRight className="w-4 h-4" />
-              </button>
-            </form>
           </div>
         </div>
 

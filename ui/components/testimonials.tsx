@@ -104,7 +104,7 @@ export function TestimonialsSection() {
           <div>
             <Quote className="w-16 h-16 mx-auto mb-8 text-background/20" />
 
-            <div className="relative min-h-[350px] md:min-h-[280px]">
+            <div className="relative min-h-[350px] md:min-h-[280px] overflow-hidden">
               {testimonials.map((testimonial, index) => (
                 <div
                   key={testimonial.author}
