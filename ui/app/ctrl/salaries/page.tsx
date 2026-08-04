@@ -26,7 +26,15 @@ interface SalaryRow {
   currentSalaryEur: number | null;
   currentSalaryGross: number | null;
   invoiceValue: number | null;
+  managementFee: number | null;
 }
+
+type EditableField = "invoiceValue" | "managementFee";
+
+const fieldEndpoint: Record<EditableField, string> = {
+  invoiceValue: "invoice-value",
+  managementFee: "management-fee",
+};
 
 function formatEur(value: number | null) {
   return value !== null ? `${value.toLocaleString()} EUR` : "—";
@@ -34,7 +42,7 @@ function formatEur(value: number | null) {
 
 function profitOf(row: SalaryRow) {
   if (row.invoiceValue === null || row.currentSalaryGross === null) return null;
-  return row.invoiceValue - row.currentSalaryGross;
+  return row.invoiceValue - row.currentSalaryGross - (row.managementFee ?? 0);
 }
 
 export default function SalariesPage() {
@@ -42,6 +50,7 @@ export default function SalariesPage() {
   const router = useRouter();
   const [rows, setRows] = useState<SalaryRow[]>([]);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState("");
 
   useEffect(() => {
@@ -61,25 +70,27 @@ export default function SalariesPage() {
     }
   }, [admin, loadRows]);
 
-  const startEdit = (row: SalaryRow) => {
+  const startEdit = (row: SalaryRow, field: EditableField) => {
     setEditingId(row.id);
-    setEditValue(row.invoiceValue !== null ? String(row.invoiceValue) : "");
+    setEditingField(field);
+    setEditValue(row[field] !== null ? String(row[field]) : "");
   };
 
   const cancelEdit = () => {
     setEditingId(null);
+    setEditingField(null);
     setEditValue("");
   };
 
-  const saveEdit = async (id: string) => {
+  const saveEdit = async () => {
+    if (!editingId || !editingField) return;
     try {
-      await cmsApi(`/api/salaries/${id}/invoice-value`, {
+      await cmsApi(`/api/salaries/${editingId}/${fieldEndpoint[editingField]}`, {
         method: "PUT",
-        body: JSON.stringify({ invoiceValue: editValue === "" ? null : editValue }),
+        body: JSON.stringify({ [editingField]: editValue === "" ? null : editValue }),
       });
-      toast.success("Invoice value updated");
-      setEditingId(null);
-      setEditValue("");
+      toast.success("Updated");
+      cancelEdit();
       loadRows();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update");
@@ -90,7 +101,8 @@ export default function SalariesPage() {
 
   const totalGross = rows.reduce((sum, row) => sum + (row.currentSalaryGross ?? 0), 0);
   const totalInvoice = rows.reduce((sum, row) => sum + (row.invoiceValue ?? 0), 0);
-  const totalProfit = totalInvoice - totalGross;
+  const totalManagementFee = rows.reduce((sum, row) => sum + (row.managementFee ?? 0), 0);
+  const totalProfit = totalInvoice - totalGross - totalManagementFee;
 
   return (
     <CmsShell>
@@ -98,7 +110,7 @@ export default function SalariesPage() {
         <h1 className="text-2xl font-bold">Salaries</h1>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">Total Gross</CardTitle>
@@ -113,6 +125,14 @@ export default function SalariesPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{totalInvoice.toLocaleString()} EUR</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">Total Management Fee</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-2xl font-bold">{totalManagementFee.toLocaleString()} EUR</p>
           </CardContent>
         </Card>
         <Card>
@@ -134,8 +154,8 @@ export default function SalariesPage() {
               <TableHead>Net (EUR)</TableHead>
               <TableHead>Gross (EUR)</TableHead>
               <TableHead>Invoice Value</TableHead>
+              <TableHead>Management Fee</TableHead>
               <TableHead>Profit</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -146,23 +166,16 @@ export default function SalariesPage() {
                 <TableCell className="text-muted-foreground">{formatEur(row.currentSalaryEur)}</TableCell>
                 <TableCell className="text-muted-foreground">{formatEur(row.currentSalaryGross)}</TableCell>
                 <TableCell>
-                  {editingId === row.id ? (
-                    <Input
-                      type="number"
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="h-8 w-32"
-                      autoFocus
-                    />
-                  ) : (
-                    formatEur(row.invoiceValue)
-                  )}
-                </TableCell>
-                <TableCell className="text-muted-foreground">{formatEur(profitOf(row))}</TableCell>
-                <TableCell>
-                  {editingId === row.id ? (
-                    <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => saveEdit(row.id)}>
+                  {editingId === row.id && editingField === "invoiceValue" ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-8 w-28"
+                        autoFocus
+                      />
+                      <Button variant="ghost" size="icon" onClick={saveEdit}>
                         <Check className="w-4 h-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={cancelEdit}>
@@ -170,11 +183,51 @@ export default function SalariesPage() {
                       </Button>
                     </div>
                   ) : (
-                    <Button variant="ghost" size="icon" onClick={() => startEdit(row)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1 group">
+                      {formatEur(row.invoiceValue)}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                        onClick={() => startEdit(row, "invoiceValue")}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
                   )}
                 </TableCell>
+                <TableCell>
+                  {editingId === row.id && editingField === "managementFee" ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        type="number"
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-8 w-28"
+                        autoFocus
+                      />
+                      <Button variant="ghost" size="icon" onClick={saveEdit}>
+                        <Check className="w-4 h-4" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={cancelEdit}>
+                        <X className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-1 group">
+                      {formatEur(row.managementFee)}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 opacity-0 group-hover:opacity-100"
+                        onClick={() => startEdit(row, "managementFee")}
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </Button>
+                    </div>
+                  )}
+                </TableCell>
+                <TableCell className="text-muted-foreground">{formatEur(profitOf(row))}</TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (

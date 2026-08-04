@@ -41,6 +41,7 @@ model TeamMember {
   currentSalaryEur   Float?    @map("current_salary_eur")
   currentSalaryGross Float?    @map("current_salary_gross")
   invoiceValue       Float?    @map("invoice_value")
+  managementFee      Float?    @map("management_fee")
   contractInMonths   Int?      @map("contract_in_months")
   lastContractDate   DateTime? @map("last_contract_date")
   nextContractDate   DateTime? @map("next_contract_date")
