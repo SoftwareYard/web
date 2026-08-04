@@ -42,7 +42,7 @@ function formatEur(value: number | null) {
 
 function profitOf(row: SalaryRow) {
   if (row.invoiceValue === null || row.currentSalaryGross === null) return null;
-  return row.invoiceValue - row.currentSalaryGross - (row.managementFee ?? 0);
+  return row.invoiceValue - row.currentSalaryGross + (row.managementFee ?? 0);
 }
 
 export default function SalariesPage() {
@@ -102,7 +102,7 @@ export default function SalariesPage() {
   const totalGross = rows.reduce((sum, row) => sum + (row.currentSalaryGross ?? 0), 0);
   const totalInvoice = rows.reduce((sum, row) => sum + (row.invoiceValue ?? 0), 0);
   const totalManagementFee = rows.reduce((sum, row) => sum + (row.managementFee ?? 0), 0);
-  const totalProfit = totalInvoice - totalGross - totalManagementFee;
+  const totalProfit = totalInvoice - totalGross + totalManagementFee;
 
   return (
     <CmsShell>
