@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -38,29 +39,39 @@ const meetingSchema = z.object({
 
 export type MeetingFormValues = z.infer<typeof meetingSchema>;
 
+const emptyValues: MeetingFormValues = {
+  date: new Date().toISOString().split("T")[0],
+  feelingAtWork: "",
+  currentWorkload: "",
+  thingsOutsideWork: "",
+  problemsWithClient: "",
+  problemsWithTeam: "",
+  skillsToDevelop: "",
+  growingInRole: "",
+  trainingOpportunities: "",
+  anythingElse: "",
+  improvementSuggestions: "",
+};
+
 interface MeetingFormProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: MeetingFormValues) => Promise<void>;
+  initialValues?: MeetingFormValues;
 }
 
-export function MeetingForm({ open, onOpenChange, onSubmit }: MeetingFormProps) {
+export function MeetingForm({ open, onOpenChange, onSubmit, initialValues }: MeetingFormProps) {
+  const isEdit = !!initialValues;
   const form = useForm<MeetingFormValues>({
     resolver: zodResolver(meetingSchema),
-    defaultValues: {
-      date: new Date().toISOString().split("T")[0],
-      feelingAtWork: "",
-      currentWorkload: "",
-      thingsOutsideWork: "",
-      problemsWithClient: "",
-      problemsWithTeam: "",
-      skillsToDevelop: "",
-      growingInRole: "",
-      trainingOpportunities: "",
-      anythingElse: "",
-      improvementSuggestions: "",
-    },
+    defaultValues: emptyValues,
   });
+
+  useEffect(() => {
+    if (open) {
+      form.reset(initialValues ?? emptyValues);
+    }
+  }, [open, initialValues, form]);
 
   const handleSubmit = async (values: MeetingFormValues) => {
     await onSubmit(values);
@@ -71,7 +82,7 @@ export function MeetingForm({ open, onOpenChange, onSubmit }: MeetingFormProps) 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>New 1-on-1 Meeting</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit 1-on-1 Meeting" : "New 1-on-1 Meeting"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -216,6 +227,8 @@ export function MeetingForm({ open, onOpenChange, onSubmit }: MeetingFormProps) 
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isEdit ? (
+                  "Save"
                 ) : (
                   "Create"
                 )}

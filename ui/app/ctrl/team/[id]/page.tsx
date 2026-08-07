@@ -41,7 +41,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, Loader2, Plus, Upload, X } from "lucide-react";
+import { ChevronLeft, Loader2, Pencil, Plus, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -116,6 +116,22 @@ function formatDate(val: string | null) {
   });
 }
 
+function meetingToFormValues(m: Meeting): MeetingFormValues {
+  return {
+    date: toDateInputValue(m.date),
+    feelingAtWork: m.feelingAtWork ?? "",
+    currentWorkload: m.currentWorkload ?? "",
+    thingsOutsideWork: m.thingsOutsideWork ?? "",
+    problemsWithClient: m.problemsWithClient ?? "",
+    problemsWithTeam: m.problemsWithTeam ?? "",
+    skillsToDevelop: m.skillsToDevelop ?? "",
+    growingInRole: m.growingInRole ?? "",
+    trainingOpportunities: m.trainingOpportunities ?? "",
+    anythingElse: m.anythingElse ?? "",
+    improvementSuggestions: m.improvementSuggestions ?? "",
+  };
+}
+
 const MEETING_FIELDS: { key: keyof Meeting; label: string }[] = [
   { key: "feelingAtWork", label: "Feeling at Work" },
   { key: "currentWorkload", label: "Current Workload" },
@@ -132,15 +148,23 @@ const MEETING_FIELDS: { key: keyof Meeting; label: string }[] = [
 function MeetingDetailDialog({
   meeting,
   onOpenChange,
+  onEdit,
 }: {
   meeting: Meeting | null;
   onOpenChange: (open: boolean) => void;
+  onEdit: (meeting: Meeting) => void;
 }) {
   return (
     <Dialog open={!!meeting} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
+        <DialogHeader className="flex-row items-center justify-between gap-2 space-y-0 pr-8">
           <DialogTitle>1-on-1 Meeting — {meeting ? formatDate(meeting.date) : ""}</DialogTitle>
+          {meeting && (
+            <Button variant="ghost" size="sm" onClick={() => onEdit(meeting)}>
+              <Pencil className="w-4 h-4 mr-1" />
+              Edit
+            </Button>
+          )}
         </DialogHeader>
         {meeting && (
           <div className="space-y-4">
@@ -212,6 +236,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
   const [fileName, setFileName] = useState("");
   const [meetingFormOpen, setMeetingFormOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
+  const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(teamSchema),
@@ -288,14 +313,34 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     loadData();
   };
 
-  const handleCreateMeeting = async (values: MeetingFormValues) => {
-    await cmsApi(`/api/team/${id}/meetings`, {
-      method: "POST",
-      body: JSON.stringify(values),
-    });
-    toast.success("Meeting created");
+  const handleSubmitMeeting = async (values: MeetingFormValues) => {
+    if (editingMeeting) {
+      await cmsApi(`/api/team/${id}/meetings/${editingMeeting.id}`, {
+        method: "PUT",
+        body: JSON.stringify(values),
+      });
+      toast.success("Meeting updated");
+    } else {
+      await cmsApi(`/api/team/${id}/meetings`, {
+        method: "POST",
+        body: JSON.stringify(values),
+      });
+      toast.success("Meeting created");
+    }
     setMeetingFormOpen(false);
+    setEditingMeeting(null);
     loadData();
+  };
+
+  const openNewMeeting = () => {
+    setEditingMeeting(null);
+    setMeetingFormOpen(true);
+  };
+
+  const openEditMeeting = (meeting: Meeting) => {
+    setSelectedMeeting(null);
+    setEditingMeeting(meeting);
+    setMeetingFormOpen(true);
   };
 
   if (!member) {
@@ -571,7 +616,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
             <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               1-on-1 Meetings
             </h2>
-            <Button size="sm" onClick={() => setMeetingFormOpen(true)}>
+            <Button size="sm" onClick={openNewMeeting}>
               <Plus className="w-4 h-4 mr-1" />
               New Meeting
             </Button>
@@ -611,12 +656,17 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
 
       <MeetingForm
         open={meetingFormOpen}
-        onOpenChange={setMeetingFormOpen}
-        onSubmit={handleCreateMeeting}
+        onOpenChange={(open) => {
+          setMeetingFormOpen(open);
+          if (!open) setEditingMeeting(null);
+        }}
+        onSubmit={handleSubmitMeeting}
+        initialValues={editingMeeting ? meetingToFormValues(editingMeeting) : undefined}
       />
       <MeetingDetailDialog
         meeting={selectedMeeting}
         onOpenChange={(open) => !open && setSelectedMeeting(null)}
+        onEdit={openEditMeeting}
       />
     </CmsShell>
   );
