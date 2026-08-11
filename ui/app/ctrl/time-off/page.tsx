@@ -6,6 +6,7 @@ import { CmsShell } from "@/components/ctrl/cms-shell";
 import { TimeOffRejectDialog } from "@/components/ctrl/time-off-reject-dialog";
 import { HolidayForm, HolidayFormValues } from "@/components/ctrl/holiday-form";
 import { AdminTimeOffForm, AdminTimeOffFormValues } from "@/components/ctrl/admin-time-off-form";
+import { EmployeeTimeOffDialog } from "@/components/ctrl/employee-time-off-dialog";
 import { cmsApi } from "@/lib/cms-api";
 import { useAuth } from "@/lib/auth";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -52,6 +53,7 @@ interface TimeOffRequestRow {
   type: RequestType;
   status: RequestStatus;
   reviewNote: string | null;
+  createdAt: string;
   employee: { id: string; name: string; email: string | null };
   reviewedBy: { id: string; name: string } | null;
 }
@@ -101,6 +103,8 @@ export default function TimeOffAdminPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [addFormOpen, setAddFormOpen] = useState(false);
   const [deleteRequestId, setDeleteRequestId] = useState<string | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<BalanceRow["employee"] | null>(null);
+  const [employeeRequests, setEmployeeRequests] = useState<TimeOffRequestRow[]>([]);
 
   useEffect(() => {
     if (admin && admin.role !== "SuperAdmin") {
@@ -129,6 +133,13 @@ export default function TimeOffAdminPage() {
     setEmployees(data);
   }, []);
 
+  const loadEmployeeRequests = useCallback(async (employeeId: string) => {
+    const data = await cmsApi<TimeOffRequestRow[]>(
+      `/api/time-off/admin/requests?employeeId=${employeeId}`
+    );
+    setEmployeeRequests(data);
+  }, []);
+
   useEffect(() => {
     if (admin?.role === "SuperAdmin") {
       loadRequests();
@@ -153,12 +164,19 @@ export default function TimeOffAdminPage() {
     }
   }, [admin, loadEmployees]);
 
+  useEffect(() => {
+    if (selectedEmployee) {
+      loadEmployeeRequests(selectedEmployee.id);
+    }
+  }, [selectedEmployee, loadEmployeeRequests]);
+
   const handleApprove = async (id: string) => {
     try {
       await cmsApi(`/api/time-off/admin/${id}/approve`, { method: "PUT" });
       toast.success("Request approved");
       loadRequests();
       loadBalances();
+      if (selectedEmployee) loadEmployeeRequests(selectedEmployee.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to approve request");
     }
@@ -175,6 +193,7 @@ export default function TimeOffAdminPage() {
       setRejectingId(null);
       loadRequests();
       loadBalances();
+      if (selectedEmployee) loadEmployeeRequests(selectedEmployee.id);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to reject request");
     }
@@ -203,6 +222,7 @@ export default function TimeOffAdminPage() {
     setDeleteRequestId(null);
     loadRequests();
     loadBalances();
+    if (selectedEmployee) loadEmployeeRequests(selectedEmployee.id);
   };
 
   const handleCreateHoliday = async (values: HolidayFormValues) => {
@@ -289,6 +309,7 @@ export default function TimeOffAdminPage() {
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Reviewed By</TableHead>
+                  <TableHead>Requested On</TableHead>
                   <TableHead className="w-48">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -316,6 +337,9 @@ export default function TimeOffAdminPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {r.reviewedBy?.name || "—"}
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">
+                      {new Date(r.createdAt).toLocaleDateString()}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
@@ -346,7 +370,7 @@ export default function TimeOffAdminPage() {
                 ))}
                 {requests.length === 0 && (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center text-muted-foreground py-8">
+                    <TableCell colSpan={10} className="text-center text-muted-foreground py-8">
                       No time off requests
                     </TableCell>
                   </TableRow>
@@ -381,7 +405,11 @@ export default function TimeOffAdminPage() {
               </TableHeader>
               <TableBody>
                 {balances.map((b) => (
-                  <TableRow key={b.employee.id}>
+                  <TableRow
+                    key={b.employee.id}
+                    className="cursor-pointer hover:bg-muted/50"
+                    onClick={() => setSelectedEmployee(b.employee)}
+                  >
                     <TableCell className="font-medium">
                       {b.employee.name}
                       <div className="text-xs text-muted-foreground">{b.employee.email || "—"}</div>
@@ -485,6 +513,17 @@ export default function TimeOffAdminPage() {
         onOpenChange={setAddFormOpen}
         onSubmit={handleAddTimeOff}
         employees={employees}
+      />
+
+      <EmployeeTimeOffDialog
+        open={!!selectedEmployee}
+        onOpenChange={(open) => !open && setSelectedEmployee(null)}
+        employee={selectedEmployee}
+        requests={employeeRequests}
+        balanceSummary={balances.find((b) => b.employee.id === selectedEmployee?.id)}
+        onApprove={handleApprove}
+        onReject={setRejectingId}
+        onDelete={setDeleteRequestId}
       />
 
       <AlertDialog

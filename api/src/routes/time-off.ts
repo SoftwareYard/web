@@ -110,7 +110,7 @@ timeOffRouter.get(
           : {}),
       },
       select: requestSelect,
-      orderBy: { createdAt: "desc" },
+      orderBy: { startDate: "desc" },
     });
 
     res.json(requests);
@@ -230,10 +230,11 @@ timeOffRouter.get(
   requireAuth,
   requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
-    const { status, year } = req.query;
+    const { status, year, employeeId } = req.query;
 
     const requests = await prisma.timeOffRequest.findMany({
       where: {
+        ...(employeeId ? { employeeId: employeeId as string } : {}),
         ...(status ? { status: status as "Pending" | "Approved" | "Rejected" | "Cancelled" } : {}),
         ...(year
           ? {
@@ -245,7 +246,7 @@ timeOffRouter.get(
           : {}),
       },
       select: requestSelect,
-      orderBy: { createdAt: "desc" },
+      orderBy: { startDate: "desc" },
     });
 
     res.json(requests);
