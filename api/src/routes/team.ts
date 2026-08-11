@@ -1,7 +1,8 @@
 import { Router, Request, Response } from "express";
 import multer from "multer";
+import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireSuperAdmin, AuthRequest } from "../middleware/auth";
 import { uploadToBunny } from "../lib/bunny";
 
 export const teamRouter = Router();
@@ -20,8 +21,27 @@ teamRouter.get("/roles", requireAuth, async (_req: Request, res: Response) => {
   res.json(roles);
 });
 
-function omitFinancials<T extends { invoiceValue?: number | null; managementFee?: number | null }>(member: T) {
-  const { invoiceValue, managementFee, ...rest } = member;
+function sanitizeMember<
+  T extends {
+    invoiceValue?: number | null;
+    managementFee?: number | null;
+    password?: string | null;
+    address?: string | null;
+    dateOfBirth?: Date | null;
+    secondContactName?: string | null;
+    secondContactPhone?: string | null;
+  }
+>(member: T) {
+  const {
+    invoiceValue,
+    managementFee,
+    password,
+    address,
+    dateOfBirth,
+    secondContactName,
+    secondContactPhone,
+    ...rest
+  } = member;
   return rest;
 }
 
@@ -30,7 +50,7 @@ teamRouter.get("/", async (_req: Request, res: Response) => {
   const members = await prisma.teamMember.findMany({
     orderBy: { sortOrder: "asc" },
   });
-  res.json(members.map(omitFinancials));
+  res.json(members.map(sanitizeMember));
 });
 
 // PROTECTED: Get single team member
@@ -41,7 +61,7 @@ teamRouter.get("/:id", requireAuth, async (req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  res.json(omitFinancials(member));
+  res.json({ ...sanitizeMember(member), hasPortalAccess: member.password !== null });
 });
 
 // PROTECTED: Create team member
@@ -52,6 +72,14 @@ teamRouter.post(
   async (req: Request, res: Response) => {
     const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder } =
       req.body;
+
+    if (email) {
+      const existing = await prisma.teamMember.findUnique({ where: { email } });
+      if (existing) {
+        res.status(409).json({ error: "Email already in use" });
+        return;
+      }
+    }
 
     let imageUrl = "";
     if (req.file) {
@@ -83,7 +111,7 @@ teamRouter.post(
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
       },
     });
-    res.status(201).json(omitFinancials(member));
+    res.status(201).json(sanitizeMember(member));
   }
 );
 
@@ -96,6 +124,14 @@ teamRouter.put(
     const id = req.params.id as string;
     const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder } =
       req.body;
+
+    if (email) {
+      const existing = await prisma.teamMember.findUnique({ where: { email } });
+      if (existing && existing.id !== id) {
+        res.status(409).json({ error: "Email already in use" });
+        return;
+      }
+    }
 
     const parsedContractInMonths = contractInMonths ? parseInt(contractInMonths) : null;
     const parsedLastContractDate = lastContractDate ? new Date(lastContractDate) : null;
@@ -128,7 +164,57 @@ teamRouter.put(
       where: { id },
       data,
     });
-    res.json(omitFinancials(member));
+    res.json(sanitizeMember(member));
+  }
+);
+
+// PROTECTED (SuperAdmin): Enable or reset time off portal access for a team member
+teamRouter.put(
+  "/:id/portal-access",
+  requireAuth,
+  requireSuperAdmin,
+  async (req: AuthRequest, res: Response) => {
+    const id = req.params.id as string;
+    const { password } = req.body;
+
+    if (!password || password.length < 8) {
+      res.status(400).json({ error: "Password must be at least 8 characters" });
+      return;
+    }
+
+    const member = await prisma.teamMember.findUnique({ where: { id } });
+    if (!member) {
+      res.status(404).json({ error: "Not found" });
+      return;
+    }
+    if (!member.email) {
+      res.status(400).json({
+        error: "Team member must have an email set before enabling portal access",
+      });
+      return;
+    }
+
+    const hashed = await bcrypt.hash(password, 10);
+    await prisma.teamMember.update({ where: { id }, data: { password: hashed } });
+
+    res.json({ hasPortalAccess: true });
+  }
+);
+
+// PROTECTED (SuperAdmin): Revoke time off portal access for a team member
+teamRouter.delete(
+  "/:id/portal-access",
+  requireAuth,
+  requireSuperAdmin,
+  async (req: AuthRequest, res: Response) => {
+    const id = req.params.id as string;
+
+    try {
+      await prisma.teamMember.update({ where: { id }, data: { password: null } });
+      res.json({ success: true });
+    } catch {
+      res.status(404).json({ error: "Not found" });
+    }
   }
 );
 

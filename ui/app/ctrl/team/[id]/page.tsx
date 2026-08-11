@@ -8,6 +8,7 @@ import { z } from "zod";
 import Image from "next/image";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { MeetingForm, MeetingFormValues } from "@/components/ctrl/meeting-form";
+import { PortalAccessDialog } from "@/components/ctrl/portal-access-dialog";
 import { cmsApi } from "@/lib/cms-api";
 import {
   Dialog,
@@ -15,6 +16,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Badge } from "@/components/ui/badge";
 import {
   Form,
   FormControl,
@@ -61,6 +73,7 @@ interface TeamMember {
   lastContractDate: string | null;
   nextContractDate: string | null;
   sortOrder: number;
+  hasPortalAccess: boolean;
 }
 
 interface CandidateRole {
@@ -237,6 +250,8 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
   const [meetingFormOpen, setMeetingFormOpen] = useState(false);
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
   const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
+  const [portalAccessDialogOpen, setPortalAccessDialogOpen] = useState(false);
+  const [revokeConfirmOpen, setRevokeConfirmOpen] = useState(false);
 
   const form = useForm<FormValues>({
     resolver: zodResolver(teamSchema),
@@ -332,6 +347,23 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     loadData();
   };
 
+  const handleSetPortalPassword = async (password: string) => {
+    await cmsApi(`/api/team/${id}/portal-access`, {
+      method: "PUT",
+      body: JSON.stringify({ password }),
+    });
+    toast.success(member?.hasPortalAccess ? "Password reset" : "Portal access enabled");
+    setPortalAccessDialogOpen(false);
+    loadData();
+  };
+
+  const handleRevokePortalAccess = async () => {
+    await cmsApi(`/api/team/${id}/portal-access`, { method: "DELETE" });
+    toast.success("Portal access revoked");
+    setRevokeConfirmOpen(false);
+    loadData();
+  };
+
   const openNewMeeting = () => {
     setEditingMeeting(null);
     setMeetingFormOpen(true);
@@ -374,6 +406,45 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
             Preview
           </h2>
           <PreviewCard member={member} />
+        </div>
+
+        {/* Time Off Portal Access */}
+        <div className="border rounded-lg p-5">
+          <h2 className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-4">
+            Time Off Portal Access
+          </h2>
+          {member.hasPortalAccess ? (
+            <div className="flex items-center justify-between">
+              <div>
+                <Badge className="mb-1">Enabled</Badge>
+                <p className="text-sm text-muted-foreground">
+                  Can log in at /portal/login using {member.email}.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => setPortalAccessDialogOpen(true)}>
+                  Reset Password
+                </Button>
+                <Button variant="destructive" size="sm" onClick={() => setRevokeConfirmOpen(true)}>
+                  Revoke Access
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex items-center justify-between">
+              <p className="text-sm text-muted-foreground">
+                This team member cannot log in to the time off portal yet.
+                {!member.email && " Add an email first."}
+              </p>
+              <Button
+                size="sm"
+                disabled={!member.email}
+                onClick={() => setPortalAccessDialogOpen(true)}
+              >
+                Enable Portal Access
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Edit */}
@@ -668,6 +739,28 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
         onOpenChange={(open) => !open && setSelectedMeeting(null)}
         onEdit={openEditMeeting}
       />
+
+      <PortalAccessDialog
+        open={portalAccessDialogOpen}
+        onOpenChange={setPortalAccessDialogOpen}
+        title={member.hasPortalAccess ? "Reset Portal Password" : "Enable Portal Access"}
+        onSubmit={handleSetPortalPassword}
+      />
+
+      <AlertDialog open={revokeConfirmOpen} onOpenChange={setRevokeConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Revoke portal access?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {member.name} will no longer be able to log in to the time off portal. Their time off history is kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleRevokePortalAccess}>Revoke</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </CmsShell>
   );
 }

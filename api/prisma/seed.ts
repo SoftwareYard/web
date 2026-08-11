@@ -67,6 +67,32 @@ async function main() {
   }
   console.log("Contract types seeded (Indefinite, Fixed, Contract)");
 
+  // Seed 2026 Macedonian public holidays
+  const publicHolidays2026 = [
+    { date: new Date("2026-01-01"), name: "New Year's Day" },
+    { date: new Date("2026-01-02"), name: "New Year's Day (2nd day)" },
+    { date: new Date("2026-01-06"), name: "Orthodox Christmas Eve (Badnik)" },
+    { date: new Date("2026-01-19"), name: "Epiphany (Vodici)" },
+    { date: new Date("2026-04-10"), name: "Orthodox Good Friday" },
+    { date: new Date("2026-05-01"), name: "Labour Day" },
+    { date: new Date("2026-05-24"), name: "Saints Cyril and Methodius Day" },
+    { date: new Date("2026-05-29"), name: "Orthodox holiday" },
+    { date: new Date("2026-08-02"), name: "Ilinden Day" },
+    { date: new Date("2026-08-28"), name: "Dormition of the Holy Mother of God" },
+    { date: new Date("2026-09-08"), name: "Independence Day" },
+    { date: new Date("2026-10-11"), name: "Day of the Macedonian Uprising" },
+    { date: new Date("2026-10-23"), name: "Day of the Macedonian Revolutionary Struggle" },
+    { date: new Date("2026-12-08"), name: "Saint Clement of Ohrid Day" },
+  ];
+  for (const holiday of publicHolidays2026) {
+    await prisma.publicHoliday.upsert({
+      where: { date: holiday.date },
+      update: { name: holiday.name },
+      create: holiday,
+    });
+  }
+  console.log(`Public holidays seeded (${publicHolidays2026.length} for 2026)`);
+
   // Seed team members
   const teamMembers = [
     {

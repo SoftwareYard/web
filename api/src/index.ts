@@ -15,7 +15,11 @@ import { assetsRouter } from "./routes/assets";
 import { storesRouter } from "./routes/stores";
 import { assetTypesRouter } from "./routes/asset-types";
 import { assetImagesRouter } from "./routes/asset-images";
+import { timeOffRouter } from "./routes/time-off";
+import { portalAuthRouter } from "./routes/portal-auth";
+import { publicHolidaysRouter } from "./routes/public-holidays";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
+import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -37,6 +41,9 @@ app.use("/api/assets", assetsRouter);
 app.use("/api/stores", storesRouter);
 app.use("/api/asset-types", assetTypesRouter);
 app.use("/api/assets/:assetId/images", assetImagesRouter);
+app.use("/api/portal-auth", portalAuthRouter);
+app.use("/api/time-off", timeOffRouter);
+app.use("/api/public-holidays", publicHolidaysRouter);
 
 
 app.get("/health", (_req, res) => {
@@ -46,6 +53,7 @@ app.get("/health", (_req, res) => {
 app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);
   startInvoiceRenewalCron();
+  startTimeOffCarryoverCron();
 });
 
 

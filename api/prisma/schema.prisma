@@ -26,7 +26,68 @@ model AdminUser {
   createdAt DateTime  @default(now()) @map("created_at")
   updatedAt DateTime  @updatedAt @map("updated_at")
 
+  timeOffReviews TimeOffRequest[] @relation("TimeOffReviews")
+
   @@map("admin_users")
+}
+
+enum TimeOffStatus {
+  Pending
+  Approved
+  Rejected
+  Cancelled
+
+  @@map("time_off_status")
+}
+
+enum TimeOffType {
+  Annual
+  Special
+
+  @@map("time_off_type")
+}
+
+model PublicHoliday {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("public_holidays")
+}
+
+model TimeOffRequest {
+  id           String        @id @default(cuid())
+  employeeId   String        @map("employee_id")
+  employee     TeamMember    @relation("TimeOffRequests", fields: [employeeId], references: [id], onDelete: Cascade)
+  startDate    DateTime      @map("start_date")
+  endDate      DateTime      @map("end_date")
+  workingDays  Int           @map("working_days")
+  reason       String?
+  type         TimeOffType   @default(Annual)
+  status       TimeOffStatus @default(Pending)
+  reviewedById String?       @map("reviewed_by_id")
+  reviewedBy   AdminUser?    @relation("TimeOffReviews", fields: [reviewedById], references: [id], onDelete: SetNull)
+  reviewNote   String?       @map("review_note")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  @@map("time_off_requests")
+}
+
+model TimeOffBalance {
+  id              String     @id @default(cuid())
+  employeeId      String     @map("employee_id")
+  employee        TeamMember @relation("TimeOffBalances", fields: [employeeId], references: [id], onDelete: Cascade)
+  year            Int
+  allowanceDays   Int        @default(20) @map("allowance_days")
+  carriedOverDays Int        @default(0) @map("carried_over_days")
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+
+  @@unique([employeeId, year])
+  @@map("time_off_balances")
 }
 
 model TeamMember {
@@ -35,8 +96,13 @@ model TeamMember {
   role               String
   image              String    @default("")
   bio                String    @default("")
-  email              String?
+  email              String?   @unique
   phone              String?
+  password           String?
+  address            String?
+  dateOfBirth        DateTime? @map("date_of_birth")
+  secondContactName  String?   @map("second_contact_name")
+  secondContactPhone String?   @map("second_contact_phone")
   hireDate           DateTime? @map("hire_date")
   currentSalaryEur   Float?    @map("current_salary_eur")
   currentSalaryGross Float?    @map("current_salary_gross")
@@ -52,6 +118,8 @@ model TeamMember {
   oneOnOneMeetings OneOnOneMeeting[]
   teamContracts    TeamContract[]
   assets           Asset[]
+  timeOffRequests  TimeOffRequest[]  @relation("TimeOffRequests")
+  timeOffBalances  TimeOffBalance[]  @relation("TimeOffBalances")
 
   @@map("team_members")
 }

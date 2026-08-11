@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Users, Briefcase, FileText, LogOut, ShieldCheck, Receipt, Package, Store, Wallet } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, FileText, LogOut, ShieldCheck, Receipt, Package, Store, Wallet, CalendarDays } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AuthGuard } from "./auth-guard";
 import {
@@ -37,6 +37,7 @@ export function CmsShell({ children }: { children: React.ReactNode }) {
       ? [
           { title: "Salaries", href: "/ctrl/salaries", icon: Wallet },
           { title: "Admins", href: "/ctrl/admins", icon: ShieldCheck },
+          { title: "Time Off", href: "/ctrl/time-off", icon: CalendarDays },
         ]
       : []),
   ];
