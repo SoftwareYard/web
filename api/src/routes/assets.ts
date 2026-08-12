@@ -26,21 +26,31 @@ assetsRouter.post("/", async (req: AuthRequest, res: Response) => {
     return;
   }
 
-  const asset = await prisma.asset.create({
-    data: {
-      storeId,
-      assetTypeId,
-      purchaseDate: new Date(purchaseDate),
-      amount: Number(amount),
-      serialNumber,
-      yearOfManufacture: Number(yearOfManufacture),
-      currentHolderId: currentHolderId || null,
-    },
-    include: {
-      store: { select: { id: true, title: true } },
-      assetType: { select: { id: true, type: true } },
-      currentHolder: { select: { id: true, name: true } },
-    },
+  const asset = await prisma.$transaction(async (tx) => {
+    const created = await tx.asset.create({
+      data: {
+        storeId,
+        assetTypeId,
+        purchaseDate: new Date(purchaseDate),
+        amount: Number(amount),
+        serialNumber,
+        yearOfManufacture: Number(yearOfManufacture),
+        currentHolderId: currentHolderId || null,
+      },
+      include: {
+        store: { select: { id: true, title: true } },
+        assetType: { select: { id: true, type: true } },
+        currentHolder: { select: { id: true, name: true } },
+      },
+    });
+
+    if (currentHolderId) {
+      await tx.assetHistory.create({
+        data: { assetId: created.id, teamMemberId: currentHolderId },
+      });
+    }
+
+    return created;
   });
 
   res.status(201).json(asset);
@@ -74,14 +84,39 @@ assetsRouter.put("/:id", async (req: AuthRequest, res: Response) => {
   }
 
   try {
-    const asset = await prisma.asset.update({
-      where: { id },
-      data,
-      include: {
-      store: { select: { id: true, title: true } },
-      assetType: { select: { id: true, type: true } },
-      currentHolder: { select: { id: true, name: true } },
-    },
+    const asset = await prisma.$transaction(async (tx) => {
+      if (currentHolderId !== undefined) {
+        const existing = await tx.asset.findUniqueOrThrow({
+          where: { id },
+          select: { currentHolderId: true },
+        });
+        const previousHolderId = existing.currentHolderId;
+        const nextHolderId = currentHolderId || null;
+
+        if (previousHolderId !== nextHolderId) {
+          if (previousHolderId) {
+            await tx.assetHistory.updateMany({
+              where: { assetId: id, teamMemberId: previousHolderId, returnedAt: null },
+              data: { returnedAt: new Date() },
+            });
+          }
+          if (nextHolderId) {
+            await tx.assetHistory.create({
+              data: { assetId: id, teamMemberId: nextHolderId },
+            });
+          }
+        }
+      }
+
+      return tx.asset.update({
+        where: { id },
+        data,
+        include: {
+          store: { select: { id: true, title: true } },
+          assetType: { select: { id: true, type: true } },
+          currentHolder: { select: { id: true, name: true } },
+        },
+      });
     });
     res.json(asset);
   } catch {

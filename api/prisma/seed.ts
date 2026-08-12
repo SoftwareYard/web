@@ -67,6 +67,17 @@ async function main() {
   }
   console.log("Contract types seeded (Indefinite, Fixed, Contract)");
 
+  // Seed equipment asset types
+  const equipmentAssetTypes = ["Laptop", "Monitor"];
+  for (const type of equipmentAssetTypes) {
+    await prisma.assetType.upsert({
+      where: { type },
+      update: {},
+      create: { type },
+    });
+  }
+  console.log(`Asset types seeded (${equipmentAssetTypes.join(", ")})`);
+
   // Seed 2026 Macedonian public holidays
   const publicHolidays2026 = [
     { date: new Date("2026-01-01"), name: "New Year's Day" },

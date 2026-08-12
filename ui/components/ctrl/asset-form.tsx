@@ -77,6 +77,7 @@ interface AssetFormProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: AssetFormValues) => Promise<void>;
   defaultValues?: AssetData | null;
+  allowedTypes?: string[];
 }
 
 export function AssetForm({
@@ -84,6 +85,7 @@ export function AssetForm({
   onOpenChange,
   onSubmit,
   defaultValues,
+  allowedTypes,
 }: AssetFormProps) {
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [stores, setStores] = useState<Store[]>([]);
@@ -233,7 +235,7 @@ export function AssetForm({
                 <FormItem>
                   <div className="flex items-center justify-between">
                     <FormLabel>Asset Type</FormLabel>
-                    {!addingType && (
+                    {!addingType && !allowedTypes && (
                       <button
                         type="button"
                         onClick={() => setAddingType(true)}
@@ -272,11 +274,13 @@ export function AssetForm({
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {assetTypes.map((t) => (
-                          <SelectItem key={t.id} value={t.id}>
-                            {t.type}
-                          </SelectItem>
-                        ))}
+                        {assetTypes
+                          .filter((t) => !allowedTypes || allowedTypes.includes(t.type))
+                          .map((t) => (
+                            <SelectItem key={t.id} value={t.id}>
+                              {t.type}
+                            </SelectItem>
+                          ))}
                       </SelectContent>
                     </Select>
                   )}
