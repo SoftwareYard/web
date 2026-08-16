@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, useMemo, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { TeamForm } from "@/components/ctrl/team-form";
 import { ExportMeetingsDialog } from "@/components/ctrl/export-meetings-dialog";
@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Trash2, FileSpreadsheet } from "lucide-react";
+import { Plus, Eye, Trash2, FileSpreadsheet, AlertCircle, X } from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -44,12 +44,16 @@ interface TeamMember {
   sortOrder: number;
 }
 
-export default function TeamPage() {
+function TeamPageInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [overdueOnly, setOverdueOnly] = useState(
+    () => searchParams.get("overdue") === "true"
+  );
 
   const loadMembers = useCallback(async () => {
     const data = await cmsApi<TeamMember[]>("/api/team");
@@ -59,6 +63,14 @@ export default function TeamPage() {
   useEffect(() => {
     loadMembers();
   }, [loadMembers]);
+
+  const filtered = useMemo(() => {
+    if (!overdueOnly) return members;
+    const now = new Date();
+    return members.filter(
+      (m) => m.nextContractDate && new Date(m.nextContractDate) < now
+    );
+  }, [members, overdueOnly]);
 
   const handleCreate = async (formData: FormData) => {
     const res = await fetch(`${API_URL}/api/team`, {
@@ -96,6 +108,16 @@ export default function TeamPage() {
         </div>
       </div>
 
+      {overdueOnly && (
+        <div className="flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-sm text-destructive w-fit mb-4">
+          <AlertCircle className="w-3.5 h-3.5" />
+          Overdue contracts only
+          <button onClick={() => setOverdueOnly(false)} className="ml-1">
+            <X className="w-3 h-3" />
+          </button>
+        </div>
+      )}
+
       <div className="border rounded-lg">
         <Table>
           <TableHeader>
@@ -108,7 +130,11 @@ export default function TeamPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {members.map((member) => (
+            {filtered.map((member) => {
+              const isOverdue =
+                !!member.nextContractDate &&
+                new Date(member.nextContractDate) < new Date();
+              return (
               <TableRow key={member.id}>
                 <TableCell className="font-medium">{member.name}</TableCell>
                 <TableCell className="text-muted-foreground">
@@ -117,7 +143,7 @@ export default function TeamPage() {
                 <TableCell className="text-muted-foreground">
                   {member.phone || "—"}
                 </TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className={isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}>
                   {member.nextContractDate
                     ? new Date(member.nextContractDate).toLocaleDateString()
                     : "—"}
@@ -141,14 +167,15 @@ export default function TeamPage() {
                   </div>
                 </TableCell>
               </TableRow>
-            ))}
-            {members.length === 0 && (
+              );
+            })}
+            {filtered.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={5}
                   className="text-center text-muted-foreground py-8"
                 >
-                  No team members yet
+                  {overdueOnly ? "No overdue contracts" : "No team members yet"}
                 </TableCell>
               </TableRow>
             )}
@@ -184,5 +211,13 @@ export default function TeamPage() {
         </AlertDialogContent>
       </AlertDialog>
     </CmsShell>
+  );
+}
+
+export default function TeamPage() {
+  return (
+    <Suspense>
+      <TeamPageInner />
+    </Suspense>
   );
 }

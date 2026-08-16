@@ -21,6 +21,8 @@ import { portalAuthRouter } from "./routes/portal-auth";
 import { publicHolidaysRouter } from "./routes/public-holidays";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
+import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
+import { startOverdueContractsCron } from "./services/overdue-contracts.service";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -56,6 +58,8 @@ app.listen(port, () => {
   console.log(`API running on http://localhost:${port}`);
   startInvoiceRenewalCron();
   startTimeOffCarryoverCron();
+  startOverdueInvoicesCron();
+  startOverdueContractsCron();
 });
 
 

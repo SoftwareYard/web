@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { AssetForm, AssetFormValues } from "@/components/ctrl/asset-form";
 import { StoreForm, StoreFormValues } from "@/components/ctrl/store-form";
 import { AssetImagesDialog } from "@/components/ctrl/asset-images-dialog";
+import { AssetHistoryDialog } from "@/components/ctrl/asset-history-dialog";
 import { cmsApi } from "@/lib/cms-api";
 import {
   Table,
@@ -14,6 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -25,7 +33,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Pencil, Trash2, ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, ImageIcon, History } from "lucide-react";
 import { toast } from "sonner";
 
 interface Asset {
@@ -45,9 +53,12 @@ interface Asset {
 
 export default function AssetsPage() {
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [holderFilter, setHolderFilter] = useState("all");
   const [formOpen, setFormOpen] = useState(false);
   const [storeFormOpen, setStoreFormOpen] = useState(false);
   const [imagesAsset, setImagesAsset] = useState<Asset | null>(null);
+  const [historyAsset, setHistoryAsset] = useState<Asset | null>(null);
   const [editing, setEditing] = useState<Asset | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -59,6 +70,37 @@ export default function AssetsPage() {
   useEffect(() => {
     loadAssets();
   }, [loadAssets]);
+
+  const assetTypeOptions = useMemo(
+    () => Array.from(new Set(assets.map((a) => a.assetType.type))).sort(),
+    [assets]
+  );
+
+  const holderOptions = useMemo(() => {
+    const holders = new Map<string, string>();
+    for (const a of assets) {
+      if (a.currentHolder) holders.set(a.currentHolder.id, a.currentHolder.name);
+    }
+    return Array.from(holders, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [assets]);
+
+  const filteredAssets = useMemo(
+    () =>
+      assets.filter((a) => {
+        if (typeFilter !== "all" && a.assetType.type !== typeFilter) return false;
+        if (holderFilter === "unassigned" && a.currentHolderId) return false;
+        if (
+          holderFilter !== "all" &&
+          holderFilter !== "unassigned" &&
+          a.currentHolderId !== holderFilter
+        )
+          return false;
+        return true;
+      }),
+    [assets, typeFilter, holderFilter]
+  );
 
   const handleCreateStore = async (values: StoreFormValues) => {
     await cmsApi("/api/stores", {
@@ -103,6 +145,33 @@ export default function AssetsPage() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Assets</h1>
         <div className="flex gap-2">
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="All Types" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Types</SelectItem>
+              {assetTypeOptions.map((type) => (
+                <SelectItem key={type} value={type}>
+                  {type}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={holderFilter} onValueChange={setHolderFilter}>
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="All Members" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Members</SelectItem>
+              <SelectItem value="unassigned">Unassigned</SelectItem>
+              {holderOptions.map((h) => (
+                <SelectItem key={h.id} value={h.id}>
+                  {h.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Button variant="outline" onClick={() => setStoreFormOpen(true)}>
             <Plus className="w-4 h-4 mr-2" />
             Add Store
@@ -129,7 +198,7 @@ export default function AssetsPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {assets.map((asset) => (
+            {filteredAssets.map((asset) => (
               <TableRow key={asset.id}>
                 <TableCell className="font-medium">{asset.store.title}</TableCell>
                 <TableCell className="text-muted-foreground">{asset.assetType.type}</TableCell>
@@ -158,6 +227,13 @@ export default function AssetsPage() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      onClick={() => setHistoryAsset(asset)}
+                    >
+                      <History className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setEditing(asset)}
                     >
                       <Pencil className="w-4 h-4" />
@@ -173,13 +249,13 @@ export default function AssetsPage() {
                 </TableCell>
               </TableRow>
             ))}
-            {assets.length === 0 && (
+            {filteredAssets.length === 0 && (
               <TableRow>
                 <TableCell
                   colSpan={8}
                   className="text-center text-muted-foreground py-8"
                 >
-                  No assets yet
+                  No assets found
                 </TableCell>
               </TableRow>
             )}
@@ -198,6 +274,13 @@ export default function AssetsPage() {
         assetLabel={imagesAsset?.serialNumber ?? ""}
         open={!!imagesAsset}
         onOpenChange={(open) => !open && setImagesAsset(null)}
+      />
+
+      <AssetHistoryDialog
+        assetId={historyAsset?.id ?? null}
+        assetLabel={historyAsset?.serialNumber ?? ""}
+        open={!!historyAsset}
+        onOpenChange={(open) => !open && setHistoryAsset(null)}
       />
 
       <AssetForm

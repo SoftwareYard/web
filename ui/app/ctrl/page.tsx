@@ -7,7 +7,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import { Users, Briefcase, AlertCircle } from "lucide-react";
+import { Users, Briefcase, AlertCircle, FileWarning } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cmsApi } from "@/lib/cms-api";
@@ -17,13 +17,25 @@ interface Invoice {
   dueDate: string;
 }
 
+interface TeamMember {
+  nextContractDate: string | null;
+}
+
 export default function CtrlDashboard() {
   const [teamCount, setTeamCount] = useState(0);
   const [jobsCount, setJobsCount] = useState(0);
   const [overdueCount, setOverdueCount] = useState(0);
+  const [overdueContractsCount, setOverdueContractsCount] = useState(0);
 
   useEffect(() => {
-    cmsApi<unknown[]>("/api/team").then((data) => setTeamCount(data.length));
+    cmsApi<TeamMember[]>("/api/team").then((data) => {
+      setTeamCount(data.length);
+      const now = new Date();
+      const overdue = data.filter(
+        (m) => m.nextContractDate && new Date(m.nextContractDate) < now
+      );
+      setOverdueContractsCount(overdue.length);
+    });
     cmsApi<unknown[]>("/api/jobs?all=true").then((data) =>
       setJobsCount(data.length)
     );
@@ -70,6 +82,20 @@ export default function CtrlDashboard() {
                 {overdueCount === 0
                   ? "No overdue invoices"
                   : `${overdueCount} invoice${overdueCount !== 1 ? "s" : ""} past due date`}
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        </Link>
+        <Link href="/ctrl/team?overdue=true">
+          <Card className="hover:border-foreground/20 transition-colors cursor-pointer border-destructive/40">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-destructive">
+                <FileWarning className="w-5 h-5" /> Overdue Contracts
+              </CardTitle>
+              <CardDescription>
+                {overdueContractsCount === 0
+                  ? "No overdue contracts"
+                  : `${overdueContractsCount} member${overdueContractsCount !== 1 ? "s" : ""} past next contract date`}
               </CardDescription>
             </CardHeader>
           </Card>
