@@ -10,6 +10,7 @@ import { CmsShell } from "@/components/ctrl/cms-shell";
 import { MeetingForm, MeetingFormValues } from "@/components/ctrl/meeting-form";
 import { PortalAccessDialog } from "@/components/ctrl/portal-access-dialog";
 import { cmsApi } from "@/lib/cms-api";
+import { Meeting, MEETING_FIELDS } from "@/lib/meeting";
 import {
   Dialog,
   DialogContent,
@@ -81,22 +82,6 @@ interface CandidateRole {
   name: string;
 }
 
-interface Meeting {
-  id: string;
-  date: string;
-  feelingAtWork: string | null;
-  currentWorkload: string | null;
-  thingsOutsideWork: string | null;
-  problemsWithClient: string | null;
-  problemsWithTeam: string | null;
-  skillsToDevelop: string | null;
-  growingInRole: string | null;
-  trainingOpportunities: string | null;
-  anythingElse: string | null;
-  improvementSuggestions: string | null;
-  createdAt: string;
-}
-
 const teamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
@@ -144,19 +129,6 @@ function meetingToFormValues(m: Meeting): MeetingFormValues {
     improvementSuggestions: m.improvementSuggestions ?? "",
   };
 }
-
-const MEETING_FIELDS: { key: keyof Meeting; label: string }[] = [
-  { key: "feelingAtWork", label: "Feeling at Work" },
-  { key: "currentWorkload", label: "Current Workload" },
-  { key: "thingsOutsideWork", label: "Things Outside Work" },
-  { key: "problemsWithClient", label: "Problems with Client" },
-  { key: "problemsWithTeam", label: "Problems with Team" },
-  { key: "skillsToDevelop", label: "Skills to Develop" },
-  { key: "growingInRole", label: "Growing in Role" },
-  { key: "trainingOpportunities", label: "Training Opportunities" },
-  { key: "improvementSuggestions", label: "Improvement Suggestions" },
-  { key: "anythingElse", label: "Anything Else" },
-];
 
 function MeetingDetailDialog({
   meeting,

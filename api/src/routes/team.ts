@@ -218,6 +218,26 @@ teamRouter.delete(
   }
 );
 
+// PROTECTED: Get OneOnOne meetings for all team members within a date range (for Excel export)
+teamRouter.get("/meetings/export", requireAuth, async (req: Request, res: Response) => {
+  const { from, to } = req.query;
+
+  const date: { gte?: Date; lte?: Date } = {};
+  if (typeof from === "string" && from) date.gte = new Date(from);
+  if (typeof to === "string" && to) {
+    const end = new Date(to);
+    end.setHours(23, 59, 59, 999);
+    date.lte = end;
+  }
+
+  const meetings = await prisma.oneOnOneMeeting.findMany({
+    where: Object.keys(date).length ? { date } : undefined,
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: [{ user: { name: "asc" } }, { date: "asc" }],
+  });
+  res.json(meetings);
+});
+
 // PROTECTED: Get OneOnOne meetings for a team member
 teamRouter.get("/:id/meetings", requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;

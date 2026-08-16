@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { TeamForm } from "@/components/ctrl/team-form";
+import { ExportMeetingsDialog } from "@/components/ctrl/export-meetings-dialog";
 import { cmsApi } from "@/lib/cms-api";
 import {
   Table,
@@ -24,7 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Trash2 } from "lucide-react";
+import { Plus, Eye, Trash2, FileSpreadsheet } from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -47,6 +48,7 @@ export default function TeamPage() {
   const router = useRouter();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [formOpen, setFormOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   const loadMembers = useCallback(async () => {
@@ -82,10 +84,16 @@ export default function TeamPage() {
     <CmsShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Team Members</h1>
-        <Button onClick={() => setFormOpen(true)}>
-          <Plus className="w-4 h-4 mr-2" />
-          New Member
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setExportOpen(true)}>
+            <FileSpreadsheet className="w-4 h-4 mr-2" />
+            Export 1-on-1s
+          </Button>
+          <Button onClick={() => setFormOpen(true)}>
+            <Plus className="w-4 h-4 mr-2" />
+            New Member
+          </Button>
+        </div>
       </div>
 
       <div className="border rounded-lg">
@@ -153,6 +161,8 @@ export default function TeamPage() {
         onOpenChange={setFormOpen}
         onSubmit={handleCreate}
       />
+
+      <ExportMeetingsDialog open={exportOpen} onOpenChange={setExportOpen} />
 
       <AlertDialog
         open={!!deleteId}
