@@ -23,6 +23,7 @@ import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
 import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
 import { startOverdueContractsCron } from "./services/overdue-contracts.service";
+import { startHolidayNoticeCron } from "./services/holiday-notice.service";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -60,6 +61,7 @@ app.listen(port, () => {
   startTimeOffCarryoverCron();
   startOverdueInvoicesCron();
   startOverdueContractsCron();
+  startHolidayNoticeCron();
 });
 
 
