@@ -218,9 +218,35 @@ model Store {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  assets Asset[]
+  assets   Asset[]
+  expenses Expense[]
 
   @@map("stores")
+}
+
+model ExpenseType {
+  id        String   @id @default(cuid())
+  type      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  expenses Expense[]
+
+  @@map("expense_types")
+}
+
+model Expense {
+  id            String      @id @default(cuid())
+  expenseTypeId String      @map("expense_type_id")
+  expenseType   ExpenseType @relation(fields: [expenseTypeId], references: [id])
+  storeId       String      @map("store_id")
+  store         Store       @relation(fields: [storeId], references: [id])
+  amount        Float
+  date          DateTime
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  @@map("expenses")
 }
 
 model AssetImage {
