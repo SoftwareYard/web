@@ -123,6 +123,7 @@ function TeamPageInner() {
         <Table>
           <TableHeader>
             <TableRow>
+              <TableHead className="w-12"></TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
@@ -138,6 +139,21 @@ function TeamPageInner() {
                 new Date(member.nextContractDate) < new Date();
               return (
               <TableRow key={member.id}>
+                <TableCell>
+                  {member.image ? (
+                    <img
+                      src={member.image}
+                      alt={member.name}
+                      className="w-8 h-8 rounded-full object-cover object-top"
+                    />
+                  ) : (
+                    <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
+                      <span className="text-xs font-semibold text-muted-foreground/50">
+                        {member.name.charAt(0)}
+                      </span>
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="font-medium">{member.name}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {member.email || "—"}
@@ -177,7 +193,7 @@ function TeamPageInner() {
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center text-muted-foreground py-8"
                 >
                   {overdueOnly ? "No overdue contracts" : "No team members yet"}
