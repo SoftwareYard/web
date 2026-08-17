@@ -36,6 +36,11 @@ interface CandidateRole {
   name: string;
 }
 
+interface Client {
+  id: string;
+  title: string;
+}
+
 const teamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
@@ -50,6 +55,7 @@ const teamSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   embg: z.string().optional(),
+  clientId: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
   currentSalaryGross: z.string().optional(),
@@ -84,9 +90,11 @@ export function TeamForm({
   const [fileName, setFileName] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [roles, setRoles] = useState<CandidateRole[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
 
   useEffect(() => {
     cmsApi<CandidateRole[]>("/api/team/roles").then(setRoles).catch(() => {});
+    cmsApi<Client[]>("/api/clients").then(setClients).catch(() => {});
   }, []);
 
   const defaults: TeamFormValues = {
@@ -99,6 +107,7 @@ export function TeamForm({
     address: "",
     city: "",
     embg: "",
+    clientId: "",
     hireDate: "",
     currentSalaryEur: "",
     currentSalaryGross: "",
@@ -117,6 +126,7 @@ export function TeamForm({
     defaults.address = (defaultValues.address as string) || "";
     defaults.city = (defaultValues.city as string) || "";
     defaults.embg = (defaultValues.embg as string) || "";
+    defaults.clientId = (defaultValues.clientId as string) || "";
     defaults.hireDate = toDateInputValue(defaultValues.hireDate);
     defaults.currentSalaryEur = defaultValues.currentSalaryEur
       ? String(defaultValues.currentSalaryEur)
@@ -147,6 +157,7 @@ export function TeamForm({
     fd.append("address", values.address || "");
     fd.append("city", values.city || "");
     fd.append("embg", values.embg || "");
+    fd.append("clientId", values.clientId || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
     fd.append("currentSalaryGross", values.currentSalaryGross || "");
@@ -209,6 +220,34 @@ export function TeamForm({
                       {roles.map((role) => (
                         <SelectItem key={role.id} value={role.name}>
                           {role.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="clientId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client</FormLabel>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                    value={field.value || "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Unassigned" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">Unassigned</SelectItem>
+                      {clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.title}
                         </SelectItem>
                       ))}
                     </SelectContent>

@@ -79,6 +79,7 @@ function sanitizePublicMember<
 teamRouter.get("/", async (_req: Request, res: Response) => {
   const members = await prisma.teamMember.findMany({
     orderBy: { sortOrder: "asc" },
+    include: { client: { select: { id: true, title: true } } },
   });
   res.json(members.map(sanitizePublicMember));
 });
@@ -86,7 +87,10 @@ teamRouter.get("/", async (_req: Request, res: Response) => {
 // PROTECTED: Get single team member
 teamRouter.get("/:id", requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const member = await prisma.teamMember.findUnique({ where: { id } });
+  const member = await prisma.teamMember.findUnique({
+    where: { id },
+    include: { client: { select: { id: true, title: true } } },
+  });
   if (!member) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -100,7 +104,7 @@ teamRouter.post(
   requireAuth,
   upload.single("image"),
   async (req: Request, res: Response) => {
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, clientId } =
       req.body;
 
     if (email) {
@@ -143,6 +147,7 @@ teamRouter.post(
         address: address || null,
         city: city || null,
         embg: embg || null,
+        clientId: clientId || null,
       },
     });
     res.status(201).json(sanitizeMember(member));
@@ -156,7 +161,7 @@ teamRouter.put(
   upload.single("image"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, clientId } =
       req.body;
 
     if (email) {
@@ -192,6 +197,7 @@ teamRouter.put(
       address: address || null,
       city: city || null,
       embg: embg || null,
+      clientId: clientId || null,
     };
 
     if (req.file) {

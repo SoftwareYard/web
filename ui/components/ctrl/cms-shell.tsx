@@ -3,7 +3,7 @@
 import { usePathname } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { LayoutDashboard, Users, Briefcase, FileText, LogOut, ShieldCheck, Receipt, Package, Store, Wallet, CalendarDays } from "lucide-react";
+import { LayoutDashboard, Users, Briefcase, FileText, LogOut, ShieldCheck, Receipt, Package, Store, Wallet, CalendarDays, Building2 } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { AuthGuard } from "./auth-guard";
 import {
@@ -28,6 +28,7 @@ export function CmsShell({ children }: { children: React.ReactNode }) {
   const navItems = [
     { title: "Dashboard", href: "/ctrl", icon: LayoutDashboard },
     { title: "Team", href: "/ctrl/team", icon: Users },
+    { title: "Clients", href: "/ctrl/clients", icon: Building2 },
     { title: "Jobs", href: "/ctrl/jobs", icon: Briefcase },
     { title: "Job Applications", href: "/ctrl/applications", icon: FileText },
     { title: "Invoices", href: "/ctrl/invoices", icon: Receipt },

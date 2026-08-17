@@ -114,6 +114,8 @@ model TeamMember {
   contractInMonths   Int?      @map("contract_in_months")
   lastContractDate   DateTime? @map("last_contract_date")
   nextContractDate   DateTime? @map("next_contract_date")
+  clientId           String?   @map("client_id")
+  client             Client?   @relation(fields: [clientId], references: [id])
   sortOrder          Int       @default(0) @map("sort_order")
   createdAt          DateTime  @default(now()) @map("created_at")
   updatedAt          DateTime  @updatedAt @map("updated_at")
@@ -126,6 +128,19 @@ model TeamMember {
   timeOffBalances  TimeOffBalance[]  @relation("TimeOffBalances")
 
   @@map("team_members")
+}
+
+model Client {
+  id           String     @id @default(cuid())
+  title        String
+  contractDate DateTime   @map("contract_date")
+  domain       String
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  teamMembers TeamMember[]
+
+  @@map("clients")
 }
 
 model ContractType {

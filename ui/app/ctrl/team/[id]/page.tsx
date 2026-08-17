@@ -71,6 +71,7 @@ interface TeamMember {
   address: string | null;
   city: string | null;
   embg: string | null;
+  clientId: string | null;
   hireDate: string | null;
   currentSalaryEur: number | null;
   currentSalaryGross: number | null;
@@ -86,6 +87,11 @@ interface CandidateRole {
   name: string;
 }
 
+interface Client {
+  id: string;
+  title: string;
+}
+
 const teamSchema = z.object({
   name: z.string().min(1, "Name is required"),
   role: z.string().min(1, "Role is required"),
@@ -96,6 +102,7 @@ const teamSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   embg: z.string().optional(),
+  clientId: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
   currentSalaryGross: z.string().optional(),
@@ -224,6 +231,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
 
   const [member, setMember] = useState<TeamMember | null>(null);
   const [roles, setRoles] = useState<CandidateRole[]>([]);
+  const [clients, setClients] = useState<Client[]>([]);
   const [meetings, setMeetings] = useState<Meeting[]>([]);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [fileName, setFileName] = useState("");
@@ -245,6 +253,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       address: "",
       city: "",
       embg: "",
+      clientId: "",
       hireDate: "",
       currentSalaryEur: "",
       currentSalaryGross: "",
@@ -255,13 +264,15 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
   });
 
   const loadData = useCallback(async () => {
-    const [m, r, mtgs] = await Promise.all([
+    const [m, r, c, mtgs] = await Promise.all([
       cmsApi<TeamMember>(`/api/team/${id}`),
       cmsApi<CandidateRole[]>("/api/team/roles"),
+      cmsApi<Client[]>("/api/clients"),
       cmsApi<Meeting[]>(`/api/team/${id}/meetings`),
     ]);
     setMember(m);
     setRoles(r);
+    setClients(c);
     setMeetings(mtgs);
     form.reset({
       name: m.name,
@@ -273,6 +284,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       address: m.address ?? "",
       city: m.city ?? "",
       embg: m.embg ?? "",
+      clientId: m.clientId ?? "",
       hireDate: toDateInputValue(m.hireDate),
       currentSalaryEur: m.currentSalaryEur != null ? String(m.currentSalaryEur) : "",
       currentSalaryGross: m.currentSalaryGross != null ? String(m.currentSalaryGross) : "",
@@ -297,6 +309,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     fd.append("address", values.address || "");
     fd.append("city", values.city || "");
     fd.append("embg", values.embg || "");
+    fd.append("clientId", values.clientId || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
     fd.append("currentSalaryGross", values.currentSalaryGross || "");
@@ -485,6 +498,35 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                   )}
                 />
               </div>
+
+              <FormField
+                control={form.control}
+                name="clientId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client</FormLabel>
+                    <Select
+                      onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                      value={field.value || "none"}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Unassigned" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="none">Unassigned</SelectItem>
+                        {clients.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.title}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <FormField
                 control={form.control}

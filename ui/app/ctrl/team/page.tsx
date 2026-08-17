@@ -42,6 +42,7 @@ interface TeamMember {
   currentSalaryEur: number | null;
   nextContractDate: string | null;
   sortOrder: number;
+  client: { id: string; title: string } | null;
 }
 
 function TeamPageInner() {
@@ -125,6 +126,7 @@ function TeamPageInner() {
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
+              <TableHead>Client</TableHead>
               <TableHead>Next Contract Date</TableHead>
               <TableHead className="w-24">Actions</TableHead>
             </TableRow>
@@ -142,6 +144,9 @@ function TeamPageInner() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {member.phone || "—"}
+                </TableCell>
+                <TableCell className="text-muted-foreground">
+                  {member.client?.title || "—"}
                 </TableCell>
                 <TableCell className={isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}>
                   {member.nextContractDate
@@ -172,7 +177,7 @@ function TeamPageInner() {
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="text-center text-muted-foreground py-8"
                 >
                   {overdueOnly ? "No overdue contracts" : "No team members yet"}
