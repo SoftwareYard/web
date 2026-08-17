@@ -12,7 +12,7 @@ export async function checkOverdueContracts() {
 
   if (overdueMembers.length === 0) {
     console.log("[overdue-contracts] No overdue contracts.");
-    return;
+    return 0;
   }
 
   const lines = overdueMembers.map((m) => {
@@ -30,6 +30,7 @@ export async function checkOverdueContracts() {
 
   await sendSlackMessage(text);
   console.log(`[overdue-contracts] Sent Slack alert for ${overdueMembers.length} overdue contract(s).`);
+  return overdueMembers.length;
 }
 
 // Runs at 08:00, Monday through Friday

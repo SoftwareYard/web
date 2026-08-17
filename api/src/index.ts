@@ -19,6 +19,7 @@ import { assetHistoryRouter } from "./routes/asset-history";
 import { timeOffRouter } from "./routes/time-off";
 import { portalAuthRouter } from "./routes/portal-auth";
 import { publicHolidaysRouter } from "./routes/public-holidays";
+import { notificationsRouter } from "./routes/notifications";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
 import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
@@ -49,6 +50,7 @@ app.use("/api/assets/:assetId/history", assetHistoryRouter);
 app.use("/api/portal-auth", portalAuthRouter);
 app.use("/api/time-off", timeOffRouter);
 app.use("/api/public-holidays", publicHolidaysRouter);
+app.use("/api/notifications", notificationsRouter);
 
 
 app.get("/health", (_req, res) => {

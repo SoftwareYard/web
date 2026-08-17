@@ -6,11 +6,14 @@ import {
   CardHeader,
   CardTitle,
   CardDescription,
+  CardContent,
 } from "@/components/ui/card";
-import { Users, Briefcase, AlertCircle, FileWarning } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cmsApi } from "@/lib/cms-api";
+import { toast } from "sonner";
 
 interface Invoice {
   paid: boolean;
@@ -26,6 +29,46 @@ export default function CtrlDashboard() {
   const [jobsCount, setJobsCount] = useState(0);
   const [overdueCount, setOverdueCount] = useState(0);
   const [overdueContractsCount, setOverdueContractsCount] = useState(0);
+  const [sendingInvoices, setSendingInvoices] = useState(false);
+  const [sendingContracts, setSendingContracts] = useState(false);
+
+  const handleSendInvoices = async () => {
+    setSendingInvoices(true);
+    try {
+      const { overdueCount } = await cmsApi<{ overdueCount: number }>(
+        "/api/notifications/overdue-invoices",
+        { method: "POST" }
+      );
+      toast.success(
+        overdueCount === 0
+          ? "No overdue invoices — nothing sent"
+          : `Sent to Slack: ${overdueCount} overdue invoice${overdueCount !== 1 ? "s" : ""}`
+      );
+    } catch {
+      toast.error("Failed to send Slack notification");
+    } finally {
+      setSendingInvoices(false);
+    }
+  };
+
+  const handleSendContracts = async () => {
+    setSendingContracts(true);
+    try {
+      const { overdueCount } = await cmsApi<{ overdueCount: number }>(
+        "/api/notifications/overdue-contracts",
+        { method: "POST" }
+      );
+      toast.success(
+        overdueCount === 0
+          ? "No overdue contracts — nothing sent"
+          : `Sent to Slack: ${overdueCount} overdue contract${overdueCount !== 1 ? "s" : ""}`
+      );
+    } catch {
+      toast.error("Failed to send Slack notification");
+    } finally {
+      setSendingContracts(false);
+    }
+  };
 
   useEffect(() => {
     cmsApi<TeamMember[]>("/api/team").then((data) => {
@@ -72,8 +115,8 @@ export default function CtrlDashboard() {
             </CardHeader>
           </Card>
         </Link>
-        <Link href="/ctrl/invoices?overdue=true">
-          <Card className="hover:border-foreground/20 transition-colors cursor-pointer border-destructive/40">
+        <Card className="border-destructive/40">
+          <Link href="/ctrl/invoices?overdue=true" className="hover:opacity-80 transition-opacity">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <AlertCircle className="w-5 h-5" /> Overdue Invoices
@@ -84,10 +127,20 @@ export default function CtrlDashboard() {
                   : `${overdueCount} invoice${overdueCount !== 1 ? "s" : ""} past due date`}
               </CardDescription>
             </CardHeader>
-          </Card>
-        </Link>
-        <Link href="/ctrl/team?overdue=true">
-          <Card className="hover:border-foreground/20 transition-colors cursor-pointer border-destructive/40">
+          </Link>
+          <CardContent>
+            <Button size="sm" variant="outline" onClick={handleSendInvoices} disabled={sendingInvoices}>
+              {sendingInvoices ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
+              Send to Slack
+            </Button>
+          </CardContent>
+        </Card>
+        <Card className="border-destructive/40">
+          <Link href="/ctrl/team?overdue=true" className="hover:opacity-80 transition-opacity">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-destructive">
                 <FileWarning className="w-5 h-5" /> Overdue Contracts
@@ -98,8 +151,18 @@ export default function CtrlDashboard() {
                   : `${overdueContractsCount} member${overdueContractsCount !== 1 ? "s" : ""} past next contract date`}
               </CardDescription>
             </CardHeader>
-          </Card>
-        </Link>
+          </Link>
+          <CardContent>
+            <Button size="sm" variant="outline" onClick={handleSendContracts} disabled={sendingContracts}>
+              {sendingContracts ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
+              Send to Slack
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </CmsShell>
   );

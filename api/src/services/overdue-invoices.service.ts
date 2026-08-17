@@ -12,7 +12,7 @@ export async function checkOverdueInvoices() {
 
   if (overdueInvoices.length === 0) {
     console.log("[overdue-invoices] No overdue invoices.");
-    return;
+    return 0;
   }
 
   const totalAmount = overdueInvoices.reduce((sum, inv) => sum + inv.amount, 0);
@@ -31,6 +31,7 @@ export async function checkOverdueInvoices() {
 
   await sendSlackMessage(text);
   console.log(`[overdue-invoices] Sent Slack alert for ${overdueInvoices.length} overdue invoice(s).`);
+  return overdueInvoices.length;
 }
 
 // Runs at 08:00, Monday through Friday
