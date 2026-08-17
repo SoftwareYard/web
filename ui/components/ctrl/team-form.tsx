@@ -46,6 +46,10 @@ const teamSchema = z.object({
     .optional()
     .or(z.literal("")),
   phone: z.string().optional(),
+  archiveNo: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  embg: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
   currentSalaryGross: z.string().optional(),
@@ -91,6 +95,10 @@ export function TeamForm({
     bio: "",
     email: "",
     phone: "",
+    archiveNo: "",
+    address: "",
+    city: "",
+    embg: "",
     hireDate: "",
     currentSalaryEur: "",
     currentSalaryGross: "",
@@ -105,6 +113,10 @@ export function TeamForm({
     defaults.bio = (defaultValues.bio as string) || "";
     defaults.email = (defaultValues.email as string) || "";
     defaults.phone = (defaultValues.phone as string) || "";
+    defaults.archiveNo = (defaultValues.archiveNo as string) || "";
+    defaults.address = (defaultValues.address as string) || "";
+    defaults.city = (defaultValues.city as string) || "";
+    defaults.embg = (defaultValues.embg as string) || "";
     defaults.hireDate = toDateInputValue(defaultValues.hireDate);
     defaults.currentSalaryEur = defaultValues.currentSalaryEur
       ? String(defaultValues.currentSalaryEur)
@@ -131,6 +143,10 @@ export function TeamForm({
     fd.append("bio", values.bio || "");
     fd.append("email", values.email || "");
     fd.append("phone", values.phone || "");
+    fd.append("archiveNo", values.archiveNo || "");
+    fd.append("address", values.address || "");
+    fd.append("city", values.city || "");
+    fd.append("embg", values.embg || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
     fd.append("currentSalaryGross", values.currentSalaryGross || "");
@@ -302,6 +318,58 @@ export function TeamForm({
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="archiveNo"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Archive No</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g. 123/2026" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="embg"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>EMBG</FormLabel>
+                    <FormControl>
+                      <Input placeholder="13-digit ID number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Address</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Street and number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="city"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>City</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Skopje" {...field} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

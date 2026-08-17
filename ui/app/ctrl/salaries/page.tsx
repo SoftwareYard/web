@@ -16,7 +16,8 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Check, X } from "lucide-react";
+import { PayriseHistoryDialog } from "@/components/ctrl/payrise-history-dialog";
+import { Pencil, Check, X, History } from "lucide-react";
 import { toast } from "sonner";
 
 interface SalaryRow {
@@ -52,6 +53,7 @@ export default function SalariesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editingField, setEditingField] = useState<EditableField | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [historyRow, setHistoryRow] = useState<SalaryRow | null>(null);
 
   useEffect(() => {
     if (admin && admin.role !== "SuperAdmin") {
@@ -156,6 +158,7 @@ export default function SalariesPage() {
               <TableHead>Invoice Value</TableHead>
               <TableHead>Management Fee</TableHead>
               <TableHead>Profit</TableHead>
+              <TableHead className="w-16">History</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -228,11 +231,16 @@ export default function SalariesPage() {
                   )}
                 </TableCell>
                 <TableCell className="text-muted-foreground">{formatEur(profitOf(row))}</TableCell>
+                <TableCell>
+                  <Button variant="ghost" size="icon" onClick={() => setHistoryRow(row)}>
+                    <History className="w-4 h-4" />
+                  </Button>
+                </TableCell>
               </TableRow>
             ))}
             {rows.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                   No employees yet
                 </TableCell>
               </TableRow>
@@ -240,6 +248,13 @@ export default function SalariesPage() {
           </TableBody>
         </Table>
       </div>
+
+      <PayriseHistoryDialog
+        memberId={historyRow?.id ?? null}
+        memberLabel={historyRow?.name ?? ""}
+        open={!!historyRow}
+        onOpenChange={(open) => !open && setHistoryRow(null)}
+      />
     </CmsShell>
   );
 }

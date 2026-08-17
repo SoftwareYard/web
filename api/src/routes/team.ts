@@ -26,7 +26,6 @@ function sanitizeMember<
     invoiceValue?: number | null;
     managementFee?: number | null;
     password?: string | null;
-    address?: string | null;
     dateOfBirth?: Date | null;
     secondContactName?: string | null;
     secondContactPhone?: string | null;
@@ -36,10 +35,41 @@ function sanitizeMember<
     invoiceValue,
     managementFee,
     password,
-    address,
     dateOfBirth,
     secondContactName,
     secondContactPhone,
+    ...rest
+  } = member;
+  return rest;
+}
+
+// Additional stripping for the public, unauthenticated endpoint — archive
+// number, address, city and EMBG are only ever shown inside the CMS.
+function sanitizePublicMember<
+  T extends {
+    invoiceValue?: number | null;
+    managementFee?: number | null;
+    password?: string | null;
+    dateOfBirth?: Date | null;
+    secondContactName?: string | null;
+    secondContactPhone?: string | null;
+    archiveNo?: string | null;
+    address?: string | null;
+    city?: string | null;
+    embg?: string | null;
+  }
+>(member: T) {
+  const {
+    invoiceValue,
+    managementFee,
+    password,
+    dateOfBirth,
+    secondContactName,
+    secondContactPhone,
+    archiveNo,
+    address,
+    city,
+    embg,
     ...rest
   } = member;
   return rest;
@@ -50,7 +80,7 @@ teamRouter.get("/", async (_req: Request, res: Response) => {
   const members = await prisma.teamMember.findMany({
     orderBy: { sortOrder: "asc" },
   });
-  res.json(members.map(sanitizeMember));
+  res.json(members.map(sanitizePublicMember));
 });
 
 // PROTECTED: Get single team member
@@ -70,7 +100,7 @@ teamRouter.post(
   requireAuth,
   upload.single("image"),
   async (req: Request, res: Response) => {
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg } =
       req.body;
 
     if (email) {
@@ -109,6 +139,10 @@ teamRouter.post(
         lastContractDate: parsedLastContractDate,
         nextContractDate: computedNextContractDate,
         sortOrder: sortOrder ? parseInt(sortOrder) : 0,
+        archiveNo: archiveNo || null,
+        address: address || null,
+        city: city || null,
+        embg: embg || null,
       },
     });
     res.status(201).json(sanitizeMember(member));
@@ -122,7 +156,7 @@ teamRouter.put(
   upload.single("image"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg } =
       req.body;
 
     if (email) {
@@ -154,6 +188,10 @@ teamRouter.put(
       lastContractDate: parsedLastContractDate,
       nextContractDate: computedNextContractDate,
       sortOrder: sortOrder ? parseInt(sortOrder) : 0,
+      archiveNo: archiveNo || null,
+      address: address || null,
+      city: city || null,
+      embg: embg || null,
     };
 
     if (req.file) {

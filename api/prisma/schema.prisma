@@ -99,7 +99,10 @@ model TeamMember {
   email              String?   @unique
   phone              String?
   password           String?
+  archiveNo          String?   @map("archive_no")
   address            String?
+  city               String?
+  embg               String?
   dateOfBirth        DateTime? @map("date_of_birth")
   secondContactName  String?   @map("second_contact_name")
   secondContactPhone String?   @map("second_contact_phone")
@@ -116,7 +119,7 @@ model TeamMember {
   updatedAt          DateTime  @updatedAt @map("updated_at")
 
   oneOnOneMeetings OneOnOneMeeting[]
-  teamContracts    TeamContract[]
+  payrises         Payrise[]
   assets           Asset[]
   assetHistory     AssetHistory[]
   timeOffRequests  TimeOffRequest[]  @relation("TimeOffRequests")
@@ -153,17 +156,17 @@ model OneOnOneMeeting {
   @@map("one_on_one_meetings")
 }
 
-model TeamContract {
-  id            String     @id @default(cuid())
-  userId        String     @map("user_id")
-  user          TeamMember @relation(fields: [userId], references: [id])
-  currentSalary Float      @map("current_salary")
-  nextSalary    Float?     @map("next_salary")
-  signDate      DateTime   @map("sign_date")
-  createdAt     DateTime   @default(now()) @map("created_at")
-  updatedAt     DateTime   @updatedAt @map("updated_at")
+model Payrise {
+  id          String     @id @default(cuid())
+  userId      String     @map("user_id")
+  user        TeamMember @relation(fields: [userId], references: [id])
+  netSalary   Float      @map("net_salary")
+  grossSalary Float      @map("gross_salary")
+  date        DateTime
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
 
-  @@map("team_contracts")
+  @@map("payrises")
 }
 
 model Job {

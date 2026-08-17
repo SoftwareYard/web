@@ -67,6 +67,10 @@ interface TeamMember {
   bio: string;
   email: string | null;
   phone: string | null;
+  archiveNo: string | null;
+  address: string | null;
+  city: string | null;
+  embg: string | null;
   hireDate: string | null;
   currentSalaryEur: number | null;
   currentSalaryGross: number | null;
@@ -88,6 +92,10 @@ const teamSchema = z.object({
   bio: z.string().default(""),
   email: z.string().email("Please enter a valid email").optional().or(z.literal("")),
   phone: z.string().optional(),
+  archiveNo: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().optional(),
+  embg: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
   currentSalaryGross: z.string().optional(),
@@ -233,6 +241,10 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       bio: "",
       email: "",
       phone: "",
+      archiveNo: "",
+      address: "",
+      city: "",
+      embg: "",
       hireDate: "",
       currentSalaryEur: "",
       currentSalaryGross: "",
@@ -257,6 +269,10 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       bio: m.bio,
       email: m.email ?? "",
       phone: m.phone ?? "",
+      archiveNo: m.archiveNo ?? "",
+      address: m.address ?? "",
+      city: m.city ?? "",
+      embg: m.embg ?? "",
       hireDate: toDateInputValue(m.hireDate),
       currentSalaryEur: m.currentSalaryEur != null ? String(m.currentSalaryEur) : "",
       currentSalaryGross: m.currentSalaryGross != null ? String(m.currentSalaryGross) : "",
@@ -277,6 +293,10 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     fd.append("bio", values.bio || "");
     fd.append("email", values.email || "");
     fd.append("phone", values.phone || "");
+    fd.append("archiveNo", values.archiveNo || "");
+    fd.append("address", values.address || "");
+    fd.append("city", values.city || "");
+    fd.append("embg", values.embg || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
     fd.append("currentSalaryGross", values.currentSalaryGross || "");
@@ -547,6 +567,57 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
                         <Input type="tel" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <FormField
+                  control={form.control}
+                  name="archiveNo"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Archive No</FormLabel>
+                      <FormControl>
+                        <Input placeholder="e.g. 123/2026" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="embg"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>EMBG</FormLabel>
+                      <FormControl>
+                        <Input placeholder="13-digit ID number" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="address"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Address</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Street and number" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>City</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Skopje" {...field} />
                       </FormControl>
                     </FormItem>
                   )}
