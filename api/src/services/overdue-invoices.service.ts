@@ -36,12 +36,16 @@ export async function checkOverdueInvoices() {
 
 // Runs at 08:00, Monday through Friday
 export function startOverdueInvoicesCron() {
-  cron.schedule("0 8 * * 1-5", () => {
-    console.log("[overdue-invoices] Running overdue invoices check...");
-    checkOverdueInvoices().catch((err) =>
-      console.error("[overdue-invoices] Error:", err)
-    );
-  });
+  cron.schedule(
+    "0 8 * * 1-5",
+    () => {
+      console.log("[overdue-invoices] Running overdue invoices check...");
+      checkOverdueInvoices().catch((err) =>
+        console.error("[overdue-invoices] Error:", err)
+      );
+    },
+    { timezone: "Europe/Skopje" }
+  );
 
   console.log("[overdue-invoices] Cron scheduled (weekdays at 08:00).");
 }

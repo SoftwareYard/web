@@ -35,12 +35,16 @@ export async function checkOverdueContracts() {
 
 // Runs at 08:00, Monday through Friday
 export function startOverdueContractsCron() {
-  cron.schedule("0 8 * * 1-5", () => {
-    console.log("[overdue-contracts] Running overdue contracts check...");
-    checkOverdueContracts().catch((err) =>
-      console.error("[overdue-contracts] Error:", err)
-    );
-  });
+  cron.schedule(
+    "0 8 * * 1-5",
+    () => {
+      console.log("[overdue-contracts] Running overdue contracts check...");
+      checkOverdueContracts().catch((err) =>
+        console.error("[overdue-contracts] Error:", err)
+      );
+    },
+    { timezone: "Europe/Skopje" }
+  );
 
   console.log("[overdue-contracts] Cron scheduled (weekdays at 08:00).");
 }

@@ -20,12 +20,16 @@ async function runYearlyCarryover() {
 
 // Runs at 00:05 on January 1st every year
 export function startTimeOffCarryoverCron() {
-  cron.schedule("5 0 1 1 *", () => {
-    console.log("[time-off-carryover] Running yearly carryover...");
-    runYearlyCarryover().catch((err) =>
-      console.error("[time-off-carryover] Error:", err)
-    );
-  });
+  cron.schedule(
+    "5 0 1 1 *",
+    () => {
+      console.log("[time-off-carryover] Running yearly carryover...");
+      runYearlyCarryover().catch((err) =>
+        console.error("[time-off-carryover] Error:", err)
+      );
+    },
+    { timezone: "Europe/Skopje" }
+  );
 
   console.log("[time-off-carryover] Cron scheduled (Jan 1 each year).");
 }

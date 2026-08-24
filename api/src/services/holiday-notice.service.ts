@@ -56,12 +56,16 @@ export async function checkUpcomingHolidays() {
 
 // Runs at 10:00 on Monday and Friday
 export function startHolidayNoticeCron() {
-  cron.schedule("0 10 * * 1,5", () => {
-    console.log("[holiday-notice] Running upcoming holiday check...");
-    checkUpcomingHolidays().catch((err) =>
-      console.error("[holiday-notice] Error:", err)
-    );
-  });
+  cron.schedule(
+    "0 10 * * 1,5",
+    () => {
+      console.log("[holiday-notice] Running upcoming holiday check...");
+      checkUpcomingHolidays().catch((err) =>
+        console.error("[holiday-notice] Error:", err)
+      );
+    },
+    { timezone: "Europe/Skopje" }
+  );
 
   console.log("[holiday-notice] Cron scheduled (Mon & Fri at 10:00).");
 }

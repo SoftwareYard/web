@@ -38,12 +38,16 @@ async function renewInvoices() {
 
 // Runs at 00:00 on the 5th of every month
 export function startInvoiceRenewalCron() {
-  cron.schedule("0 0 5 * *", () => {
-    console.log("[invoice-renewal] Running monthly invoice renewal...");
-    renewInvoices().catch((err) =>
-      console.error("[invoice-renewal] Error:", err)
-    );
-  });
+  cron.schedule(
+    "0 0 5 * *",
+    () => {
+      console.log("[invoice-renewal] Running monthly invoice renewal...");
+      renewInvoices().catch((err) =>
+        console.error("[invoice-renewal] Error:", err)
+      );
+    },
+    { timezone: "Europe/Skopje" }
+  );
 
   console.log("[invoice-renewal] Cron scheduled (5th of every month).");
 }
