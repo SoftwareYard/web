@@ -59,6 +59,13 @@ interface Holiday {
   name: string;
 }
 
+interface UpcomingBirthday {
+  id: string;
+  name: string;
+  date: string;
+  daysUntil: number;
+}
+
 const statusVariant: Record<RequestStatus, "secondary" | "default" | "destructive" | "outline"> = {
   Pending: "secondary",
   Approved: "default",
@@ -70,21 +77,24 @@ export default function PortalPage() {
   const [balance, setBalance] = useState<Balance | null>(null);
   const [requests, setRequests] = useState<TimeOffRequestRow[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const year = new Date().getFullYear();
-    const [balanceData, requestsData, holidaysData] = await Promise.all([
+    const [balanceData, requestsData, holidaysData, birthdaysData] = await Promise.all([
       cmsApi<Balance>("/api/time-off/balance"),
       cmsApi<TimeOffRequestRow[]>("/api/time-off/my-requests"),
       cmsApi<Holiday[]>(`/api/public-holidays?year=${year}`),
+      cmsApi<UpcomingBirthday[]>("/api/birthdays/upcoming"),
     ]);
     setBalance(balanceData);
     setRequests(requestsData);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     setHolidays(holidaysData.filter((h) => new Date(h.date) >= today));
+    setBirthdays(birthdaysData);
   }, []);
 
   useEffect(() => {
@@ -179,6 +189,34 @@ export default function PortalPage() {
               </CardContent>
             </Card>
           )}
+
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle className="text-base">Upcoming Birthdays</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {birthdays.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No upcoming birthdays</p>
+              ) : (
+                <ul className="space-y-1 text-sm">
+                  {birthdays.map((b) => (
+                    <li key={b.id} className="flex justify-between text-muted-foreground">
+                      <span>{b.name}</span>
+                      <span>
+                        {b.daysUntil === 0
+                          ? "Today"
+                          : new Date(b.date).toLocaleDateString("en-GB", {
+                              weekday: "short",
+                              day: "2-digit",
+                              month: "short",
+                            })}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="border rounded-lg">
             <Table>

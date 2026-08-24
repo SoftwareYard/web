@@ -23,11 +23,13 @@ import { timeOffRouter } from "./routes/time-off";
 import { portalAuthRouter } from "./routes/portal-auth";
 import { publicHolidaysRouter } from "./routes/public-holidays";
 import { notificationsRouter } from "./routes/notifications";
+import { birthdaysRouter } from "./routes/birthdays";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
 import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
 import { startOverdueContractsCron } from "./services/overdue-contracts.service";
 import { startHolidayNoticeCron } from "./services/holiday-notice.service";
+import { startBirthdayNoticeCron } from "./services/birthday-notice.service";
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -57,6 +59,7 @@ app.use("/api/portal-auth", portalAuthRouter);
 app.use("/api/time-off", timeOffRouter);
 app.use("/api/public-holidays", publicHolidaysRouter);
 app.use("/api/notifications", notificationsRouter);
+app.use("/api/birthdays", birthdaysRouter);
 
 
 app.get("/health", (_req, res) => {
@@ -70,6 +73,7 @@ app.listen(port, () => {
   startOverdueInvoicesCron();
   startOverdueContractsCron();
   startHolidayNoticeCron();
+  startBirthdayNoticeCron();
 });
 
 

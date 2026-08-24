@@ -9,7 +9,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2 } from "lucide-react";
+import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2, Cake } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { cmsApi } from "@/lib/cms-api";
@@ -24,6 +24,13 @@ interface TeamMember {
   nextContractDate: string | null;
 }
 
+interface UpcomingBirthday {
+  id: string;
+  name: string;
+  date: string;
+  daysUntil: number;
+}
+
 export default function CtrlDashboard() {
   const [teamCount, setTeamCount] = useState(0);
   const [jobsCount, setJobsCount] = useState(0);
@@ -31,6 +38,8 @@ export default function CtrlDashboard() {
   const [overdueContractsCount, setOverdueContractsCount] = useState(0);
   const [sendingInvoices, setSendingInvoices] = useState(false);
   const [sendingContracts, setSendingContracts] = useState(false);
+  const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
+  const [sendingBirthdays, setSendingBirthdays] = useState(false);
 
   const handleSendInvoices = async () => {
     setSendingInvoices(true);
@@ -70,6 +79,25 @@ export default function CtrlDashboard() {
     }
   };
 
+  const handleSendBirthdays = async () => {
+    setSendingBirthdays(true);
+    try {
+      const { sentCount } = await cmsApi<{ sentCount: number }>(
+        "/api/notifications/birthdays",
+        { method: "POST" }
+      );
+      toast.success(
+        sentCount === 0
+          ? "No birthdays today — nothing sent"
+          : `Sent to Slack: ${sentCount} birthday${sentCount !== 1 ? "s" : ""}`
+      );
+    } catch {
+      toast.error("Failed to send Slack notification");
+    } finally {
+      setSendingBirthdays(false);
+    }
+  };
+
   useEffect(() => {
     cmsApi<TeamMember[]>("/api/team").then((data) => {
       setTeamCount(data.length);
@@ -89,6 +117,7 @@ export default function CtrlDashboard() {
       );
       setOverdueCount(overdue.length);
     });
+    cmsApi<UpcomingBirthday[]>("/api/birthdays/upcoming").then(setBirthdays);
   }, []);
 
   return (
@@ -155,6 +184,46 @@ export default function CtrlDashboard() {
           <CardContent>
             <Button size="sm" variant="outline" onClick={handleSendContracts} disabled={sendingContracts}>
               {sendingContracts ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
+              Send to Slack
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Cake className="w-5 h-5" /> Upcoming Birthdays
+            </CardTitle>
+            <CardDescription>
+              {birthdays.length === 0
+                ? "None in the next 7 days"
+                : `${birthdays.length} in the next 7 days`}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {birthdays.length > 0 && (
+              <ul className="space-y-1 text-sm mb-3">
+                {birthdays.map((b) => (
+                  <li key={b.id} className="flex justify-between text-muted-foreground">
+                    <span>{b.name}</span>
+                    <span>
+                      {b.daysUntil === 0
+                        ? "Today"
+                        : new Date(b.date).toLocaleDateString("en-GB", {
+                            weekday: "short",
+                            day: "2-digit",
+                            month: "short",
+                          })}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <Button size="sm" variant="outline" onClick={handleSendBirthdays} disabled={sendingBirthdays}>
+              {sendingBirthdays ? (
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
               ) : (
                 <Send className="w-4 h-4 mr-1" />
