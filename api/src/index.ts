@@ -24,6 +24,8 @@ import { portalAuthRouter } from "./routes/portal-auth";
 import { publicHolidaysRouter } from "./routes/public-holidays";
 import { notificationsRouter } from "./routes/notifications";
 import { birthdaysRouter } from "./routes/birthdays";
+import { chatBotRouter } from "./routes/chat-bot";
+import { scheduleCallRouter } from "./routes/schedule-call";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
 import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
@@ -60,6 +62,8 @@ app.use("/api/time-off", timeOffRouter);
 app.use("/api/public-holidays", publicHolidaysRouter);
 app.use("/api/notifications", notificationsRouter);
 app.use("/api/birthdays", birthdaysRouter);
+app.use("/api/chat-bot", chatBotRouter);
+app.use("/api/schedule-call", scheduleCallRouter);
 
 
 app.get("/health", (_req, res) => {

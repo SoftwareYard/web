@@ -4,6 +4,7 @@ import { useRef } from "react"
 import {
   Zap,
   Users,
+  UserPlus,
   Database,
   Shield,
   Smartphone,
@@ -29,6 +30,13 @@ const services = [
     title: "Dedicated Resources",
     description:
       "We help you find the right people that will become the core tech team you can trust to deliver, or augment your current delivery team.",
+    featured: false,
+  },
+  {
+    icon: UserPlus,
+    title: "Recruitment",
+    description:
+      "We source, screen and place skilled tech talent for your team, managing the process end-to-end — from candidate search to final offer — so you get the right hire without the overhead.",
     featured: false,
   },
   {
@@ -85,9 +93,11 @@ const services = [
 function ServiceCard({
   service,
   index,
+  centerLastRow,
 }: {
   service: (typeof services)[0]
   index: number
+  centerLastRow: boolean
 }) {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
@@ -98,7 +108,8 @@ function ServiceCard({
       className={cn(
         "group relative p-8 rounded-3xl transition-all duration-500 opacity-0 h-full flex flex-col",
         "bg-card border border-border hover:border-foreground/20",
-        isInView && "opacity-100 animate-fade-in-up"
+        isInView && "opacity-100 animate-fade-in-up",
+        centerLastRow && "lg:col-start-2"
       )}
       style={{ animationDelay: `${index * 100}ms` }}
     >
@@ -148,9 +159,18 @@ export function ServicesSection() {
         </div>
 
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {services.map((service, index) => (
-            <ServiceCard key={service.title} service={service} index={index} />
-          ))}
+          {services.map((service, index) => {
+            const isOrphan =
+              index === services.length - 1 && services.length % 3 === 1
+            return (
+              <ServiceCard
+                key={service.title}
+                service={service}
+                index={index}
+                centerLastRow={isOrphan}
+              />
+            )
+          })}
         </div>
       </div>
     </section>

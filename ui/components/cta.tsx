@@ -1,14 +1,16 @@
 "use client"
 
-import { useRef } from "react"
-import { ArrowRight, Sparkles } from "lucide-react"
+import { useRef, useState } from "react"
+import { Sparkles } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useInView } from "@/hooks/use-in-view"
 import { cn } from "@/lib/utils"
+import { ScheduleCallDialog } from "@/components/schedule-call-dialog"
 
 export function CTASection() {
   const ref = useRef<HTMLDivElement>(null)
   const isInView = useInView(ref, { once: true })
+  const [scheduleOpen, setScheduleOpen] = useState(false)
 
   return (
     <section className="py-24 md:py-32">
@@ -46,15 +48,9 @@ export function CTASection() {
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button
                   size="lg"
-                  className="rounded-full px-8 bg-background text-foreground hover:bg-background/90 gap-2 group"
-                >
-                  Start a Conversation
-                  <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
-                </Button>
-                <Button
-                  size="lg"
                   variant="outline"
                   className="rounded-full px-8 border-background/20 text-background hover:bg-background/10 bg-transparent"
+                  onClick={() => setScheduleOpen(true)}
                 >
                   Schedule a Call
                 </Button>
@@ -63,6 +59,8 @@ export function CTASection() {
           </div>
         </div>
       </div>
+
+      <ScheduleCallDialog open={scheduleOpen} onOpenChange={setScheduleOpen} />
     </section>
   )
 }

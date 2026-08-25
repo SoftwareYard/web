@@ -1,27 +1,21 @@
 "use client"
 
 import Link from "next/link"
-import { Facebook, Instagram, Linkedin } from "lucide-react"
+import { Facebook, Instagram, Linkedin, Mail, MapPin, Clock } from "lucide-react"
 
 const footerLinks = {
-  services: [
-    { label: "Digital Transformation", href: "#" },
-    { label: "App Development", href: "#" },
-    { label: "Cloud Solutions", href: "#" },
-    { label: "Quality Assurance", href: "#" },
-  ],
   company: [
     { label: "About Us", href: "#about" },
-    { label: "Careers", href: "#" },
+    { label: "Careers", href: "/careers" },
     { label: "Contact", href: "#contact" },
   ],
-  resources: [
-    { label: "Blog", href: "#" },
-    { label: "Case Studies", href: "#" },
-    { label: "Documentation", href: "#" },
-    { label: "Support", href: "#" },
-  ],
 }
+
+const contactInfo = [
+  { icon: Mail, value: "contact@softwareyard.co", href: "mailto:contact@softwareyard.co" },
+  { icon: MapPin, value: "Bitola, North Macedonia", href: null },
+  { icon: Clock, value: "Mon - Fri, 10:00 - 18:00 CET", href: null },
+]
 
 const socialLinks = [
   { icon: Facebook, label: "Facebook", href: "https://www.facebook.com/softwareyardmk" },
@@ -66,18 +60,12 @@ export function Footer() {
           {/* Services */}
           <div>
             <h4 className="font-semibold text-background mb-4">Services</h4>
-            <ul className="space-y-3">
-              {footerLinks.services.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-background/60 hover:text-background transition-colors text-sm"
-                  >
-                    {link.label}
-                  </a>
-                </li>
-              ))}
-            </ul>
+            <a
+              href="#services"
+              className="text-background/60 hover:text-background transition-colors text-sm"
+            >
+              Our Services
+            </a>
           </div>
 
           {/* Company */}
@@ -97,18 +85,20 @@ export function Footer() {
             </ul>
           </div>
 
-          {/* Resources */}
+          {/* Contact */}
           <div>
-            <h4 className="font-semibold text-background mb-4">Resources</h4>
+            <h4 className="font-semibold text-background mb-4">Contact</h4>
             <ul className="space-y-3">
-              {footerLinks.resources.map((link) => (
-                <li key={link.label}>
-                  <a
-                    href={link.href}
-                    className="text-background/60 hover:text-background transition-colors text-sm"
-                  >
-                    {link.label}
-                  </a>
+              {contactInfo.map((item) => (
+                <li key={item.value} className="flex items-start gap-2 text-sm text-background/60">
+                  <item.icon className="w-4 h-4 mt-0.5 shrink-0" />
+                  {item.href ? (
+                    <a href={item.href} className="hover:text-background transition-colors">
+                      {item.value}
+                    </a>
+                  ) : (
+                    <span>{item.value}</span>
+                  )}
                 </li>
               ))}
             </ul>
@@ -116,21 +106,10 @@ export function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div className="flex flex-col md:flex-row items-center justify-between gap-4 pt-8">
+        <div className="pt-8 text-center">
           <p className="text-background/40 text-sm">
             &copy; {new Date().getFullYear()} SoftwareYard. All rights reserved.
           </p>
-          <div className="flex gap-6">
-            <a href="#" className="text-background/40 hover:text-background text-sm transition-colors">
-              Privacy Policy
-            </a>
-            <a href="#" className="text-background/40 hover:text-background text-sm transition-colors">
-              Terms of Service
-            </a>
-            <a href="#" className="text-background/40 hover:text-background text-sm transition-colors">
-              Cookie Policy
-            </a>
-          </div>
         </div>
       </div>
     </footer>
