@@ -19,9 +19,13 @@ async function getTeam(): Promise<TeamMember[]> {
     const res = await fetch(`${API_URL}/api/team`, {
       next: { revalidate: process.env.NODE_ENV === "development" ? 0 : 60 },
     })
-    if (!res.ok) return []
+    if (!res.ok) {
+      console.error(`getTeam: ${API_URL}/api/team responded ${res.status}`)
+      return []
+    }
     return res.json()
-  } catch {
+  } catch (err) {
+    console.error(`getTeam: fetch to ${API_URL}/api/team failed`, err)
     return []
   }
 }
