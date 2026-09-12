@@ -114,6 +114,7 @@ model TeamMember {
   contractInMonths   Int?      @map("contract_in_months")
   lastContractDate   DateTime? @map("last_contract_date")
   nextContractDate   DateTime? @map("next_contract_date")
+  contractDocumentUrl String?  @map("contract_document_url")
   clientId           String?   @map("client_id")
   client             Client?   @relation(fields: [clientId], references: [id])
   sortOrder          Int       @default(0) @map("sort_order")

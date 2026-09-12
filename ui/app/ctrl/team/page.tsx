@@ -124,6 +124,7 @@ function TeamPageInner() {
           <TableHeader>
             <TableRow>
               <TableHead className="w-12"></TableHead>
+              <TableHead className="w-16">Sort</TableHead>
               <TableHead>Name</TableHead>
               <TableHead>Email</TableHead>
               <TableHead>Phone</TableHead>
@@ -154,6 +155,7 @@ function TeamPageInner() {
                     </div>
                   )}
                 </TableCell>
+                <TableCell className="text-muted-foreground">{member.sortOrder}</TableCell>
                 <TableCell className="font-medium">{member.name}</TableCell>
                 <TableCell className="text-muted-foreground">
                   {member.email || "—"}
@@ -193,7 +195,7 @@ function TeamPageInner() {
             {filtered.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={7}
+                  colSpan={8}
                   className="text-center text-muted-foreground py-8"
                 >
                   {overdueOnly ? "No overdue contracts" : "No team members yet"}

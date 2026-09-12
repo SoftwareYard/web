@@ -15,6 +15,7 @@ services:
       context: ./ui
       args:
         NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+        NEXT_PUBLIC_GA_ID: ${NEXT_PUBLIC_GA_ID}
     restart: unless-stopped
     env_file: ./ui/.env.production
     ports:

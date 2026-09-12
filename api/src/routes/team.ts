@@ -368,6 +368,36 @@ teamRouter.put("/:id/meetings/:meetingId", requireAuth, async (req: Request, res
   }
 });
 
+// PROTECTED: Upload a contract document for a team member
+teamRouter.post(
+  "/:id/contract-document",
+  requireAuth,
+  upload.single("file"),
+  async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+
+    const member = await prisma.teamMember.findUnique({ where: { id } });
+    if (!member) {
+      res.status(404).json({ error: "Team member not found" });
+      return;
+    }
+
+    if (!req.file) {
+      res.status(400).json({ error: "No file uploaded" });
+      return;
+    }
+
+    const documentUrl = await uploadToBunny(req.file.buffer, req.file.originalname, "Contracts");
+
+    const updated = await prisma.teamMember.update({
+      where: { id },
+      data: { contractDocumentUrl: documentUrl },
+    });
+
+    res.status(201).json({ contractDocumentUrl: updated.contractDocumentUrl });
+  }
+);
+
 // PROTECTED: Delete team member
 teamRouter.delete("/:id", requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;
