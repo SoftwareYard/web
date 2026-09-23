@@ -59,6 +59,20 @@ interface Holiday {
   name: string;
 }
 
+interface OnLeave {
+  id: string;
+  startDate: string;
+  endDate: string;
+  employee: { id: string; name: string };
+}
+
+const formatShortDate = (date: string) =>
+  new Date(date).toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  });
+
 interface UpcomingBirthday {
   id: string;
   name: string;
@@ -78,16 +92,18 @@ export default function PortalPage() {
   const [requests, setRequests] = useState<TimeOffRequestRow[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
+  const [onLeave, setOnLeave] = useState<OnLeave[]>([]);
   const [formOpen, setFormOpen] = useState(false);
   const [cancelId, setCancelId] = useState<string | null>(null);
 
   const loadData = useCallback(async () => {
     const year = new Date().getFullYear();
-    const [balanceData, requestsData, holidaysData, birthdaysData] = await Promise.all([
+    const [balanceData, requestsData, holidaysData, birthdaysData, onLeaveData] = await Promise.all([
       cmsApi<Balance>("/api/time-off/balance"),
       cmsApi<TimeOffRequestRow[]>("/api/time-off/my-requests"),
       cmsApi<Holiday[]>(`/api/public-holidays?year=${year}`),
       cmsApi<UpcomingBirthday[]>("/api/birthdays/upcoming"),
+      cmsApi<OnLeave[]>("/api/time-off/on-leave"),
     ]);
     setBalance(balanceData);
     setRequests(requestsData);
@@ -95,6 +111,7 @@ export default function PortalPage() {
     today.setHours(0, 0, 0, 0);
     setHolidays(holidaysData.filter((h) => new Date(h.date) >= today));
     setBirthdays(birthdaysData);
+    setOnLeave(onLeaveData);
   }, []);
 
   useEffect(() => {
@@ -149,74 +166,92 @@ export default function PortalPage() {
             </Button>
           </div>
 
-          {balance && (
-            <Card className="mb-6">
+          <div className="grid gap-6 md:grid-cols-2 mb-6">
+            <Card>
               <CardHeader>
-                <CardTitle>{balance.remainingDays} / {balance.totalAllowance} days remaining</CardTitle>
+                <CardTitle>
+                  {balance ? `${balance.remainingDays} / ${balance.totalAllowance} days remaining` : "Days remaining"}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  {balance.allowanceDays} base days
-                  {balance.carriedOverDays > 0
-                    ? ` + ${balance.carriedOverDays} carried over from last year`
-                    : ""}{" "}
-                  for {balance.year}. {balance.reservedDays} day(s) already pending or approved.
-                </p>
+                {balance && (
+                  <p className="text-sm text-muted-foreground">
+                    {balance.allowanceDays} base days
+                    {balance.carriedOverDays > 0
+                      ? ` + ${balance.carriedOverDays} carried over from last year`
+                      : ""}{" "}
+                    for {balance.year}. {balance.reservedDays} day(s) already pending or approved.
+                  </p>
+                )}
               </CardContent>
             </Card>
-          )}
 
-          {holidays.length > 0 && (
-            <Card className="mb-6">
+            <Card>
               <CardHeader>
                 <CardTitle className="text-base">Upcoming Public Holidays</CardTitle>
               </CardHeader>
               <CardContent>
-                <ul className="space-y-1 text-sm">
-                  {holidays.map((h) => (
-                    <li key={h.id} className="flex justify-between text-muted-foreground">
-                      <span>{h.name}</span>
-                      <span>
-                        {new Date(h.date).toLocaleDateString("en-GB", {
-                          weekday: "short",
-                          day: "2-digit",
-                          month: "short",
-                        })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
+                {holidays.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No upcoming public holidays</p>
+                ) : (
+                  <ul className="space-y-1 text-sm">
+                    {holidays.map((h) => (
+                      <li key={h.id} className="flex justify-between gap-4 text-muted-foreground">
+                        <span>{h.name}</span>
+                        <span className="shrink-0">{formatShortDate(h.date)}</span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
               </CardContent>
             </Card>
-          )}
+          </div>
 
-          <Card className="mb-6">
-            <CardHeader>
-              <CardTitle className="text-base">Upcoming Birthdays</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {birthdays.length === 0 ? (
-                <p className="text-sm text-muted-foreground">No upcoming birthdays</p>
-              ) : (
-                <ul className="space-y-1 text-sm">
-                  {birthdays.map((b) => (
-                    <li key={b.id} className="flex justify-between text-muted-foreground">
-                      <span>{b.name}</span>
-                      <span>
-                        {b.daysUntil === 0
-                          ? "Today"
-                          : new Date(b.date).toLocaleDateString("en-GB", {
-                              weekday: "short",
-                              day: "2-digit",
-                              month: "short",
-                            })}
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </CardContent>
-          </Card>
+          <div className="grid gap-6 md:grid-cols-2 mb-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Currently On Vacation</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {onLeave.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nobody is on vacation today</p>
+                ) : (
+                  <ul className="space-y-1 text-sm">
+                    {onLeave.map((l) => (
+                      <li key={l.id} className="flex justify-between gap-4 text-muted-foreground">
+                        <span>{l.employee.name}</span>
+                        <span className="shrink-0">
+                          {formatShortDate(l.startDate)} – {formatShortDate(l.endDate)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Upcoming Birthdays</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {birthdays.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No upcoming birthdays</p>
+                ) : (
+                  <ul className="space-y-1 text-sm">
+                    {birthdays.map((b) => (
+                      <li key={b.id} className="flex justify-between gap-4 text-muted-foreground">
+                        <span>{b.name}</span>
+                        <span className="shrink-0">
+                          {b.daysUntil === 0 ? "Today" : formatShortDate(b.date)}
+                        </span>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </CardContent>
+            </Card>
+          </div>
 
           <div className="border rounded-lg">
             <Table>

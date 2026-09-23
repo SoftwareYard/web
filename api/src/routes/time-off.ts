@@ -117,6 +117,33 @@ timeOffRouter.get(
   }
 );
 
+// Team members with approved time off covering today
+timeOffRouter.get(
+  "/on-leave",
+  requireTeamMemberAuth,
+  async (_req: PortalAuthRequest, res: Response) => {
+    const now = new Date();
+    const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+
+    const requests = await prisma.timeOffRequest.findMany({
+      where: {
+        status: "Approved",
+        startDate: { lte: today },
+        endDate: { gte: today },
+      },
+      select: {
+        id: true,
+        startDate: true,
+        endDate: true,
+        employee: { select: { id: true, name: true } },
+      },
+      orderBy: { endDate: "asc" },
+    });
+
+    res.json(requests);
+  }
+);
+
 timeOffRouter.post("/", requireTeamMemberAuth, async (req: PortalAuthRequest, res: Response) => {
   const { startDate: startInput, endDate: endInput, reason } = req.body;
 
