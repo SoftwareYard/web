@@ -35,11 +35,11 @@ export function CmsShell({ children }: { children: React.ReactNode }) {
     { title: "Expenses", href: "/ctrl/expenses", icon: Coins },
     { title: "Assets", href: "/ctrl/assets", icon: Package },
     { title: "Stores", href: "/ctrl/stores", icon: Store },
+    { title: "Time Off", href: "/ctrl/time-off", icon: CalendarDays },
     ...(admin?.role === "SuperAdmin"
       ? [
           { title: "Salaries", href: "/ctrl/salaries", icon: Wallet },
           { title: "Admins", href: "/ctrl/admins", icon: ShieldCheck },
-          { title: "Time Off", href: "/ctrl/time-off", icon: CalendarDays },
         ]
       : []),
   ];

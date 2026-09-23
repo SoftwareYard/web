@@ -228,7 +228,6 @@ timeOffRouter.delete(
 timeOffRouter.get(
   "/admin/requests",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const { status, year, employeeId } = req.query;
 
@@ -259,7 +258,6 @@ timeOffRouter.get(
 timeOffRouter.post(
   "/admin",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const {
       employeeId,
@@ -346,7 +344,6 @@ timeOffRouter.post(
 timeOffRouter.delete(
   "/admin/:id",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const id = String(req.params.id);
 
@@ -362,7 +359,6 @@ timeOffRouter.delete(
 timeOffRouter.get(
   "/admin/balances",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const year = Number(req.query.year) || new Date().getFullYear();
 

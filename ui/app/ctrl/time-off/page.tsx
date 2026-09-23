@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { TimeOffRejectDialog } from "@/components/ctrl/time-off-reject-dialog";
 import { HolidayForm, HolidayFormValues } from "@/components/ctrl/holiday-form";
@@ -89,7 +88,6 @@ const statusVariant: Record<RequestStatus, "secondary" | "default" | "destructiv
 
 export default function TimeOffAdminPage() {
   const { admin } = useAuth();
-  const router = useRouter();
   const [requests, setRequests] = useState<TimeOffRequestRow[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("All");
   const [balances, setBalances] = useState<BalanceRow[]>([]);
@@ -105,12 +103,6 @@ export default function TimeOffAdminPage() {
   const [deleteRequestId, setDeleteRequestId] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<BalanceRow["employee"] | null>(null);
   const [employeeRequests, setEmployeeRequests] = useState<TimeOffRequestRow[]>([]);
-
-  useEffect(() => {
-    if (admin && admin.role !== "SuperAdmin") {
-      router.replace("/ctrl");
-    }
-  }, [admin, router]);
 
   const loadRequests = useCallback(async () => {
     const query = statusFilter !== "All" ? `?status=${statusFilter}` : "";
@@ -141,25 +133,25 @@ export default function TimeOffAdminPage() {
   }, []);
 
   useEffect(() => {
-    if (admin?.role === "SuperAdmin") {
+    if (admin) {
       loadRequests();
     }
   }, [admin, loadRequests]);
 
   useEffect(() => {
-    if (admin?.role === "SuperAdmin") {
+    if (admin) {
       loadBalances();
     }
   }, [admin, loadBalances]);
 
   useEffect(() => {
-    if (admin?.role === "SuperAdmin") {
+    if (admin) {
       loadHolidays();
     }
   }, [admin, loadHolidays]);
 
   useEffect(() => {
-    if (admin?.role === "SuperAdmin") {
+    if (admin) {
       loadEmployees();
     }
   }, [admin, loadEmployees]);
@@ -264,7 +256,7 @@ export default function TimeOffAdminPage() {
     loadHolidays();
   };
 
-  if (admin?.role !== "SuperAdmin") return null;
+  if (!admin) return null;
 
   return (
     <CmsShell>
@@ -343,7 +335,7 @@ export default function TimeOffAdminPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">
-                        {r.status === "Pending" && (
+                        {r.status === "Pending" && admin?.role === "SuperAdmin" && (
                           <>
                             <Button size="sm" onClick={() => handleApprove(r.id)}>
                               Approve

@@ -38,6 +38,8 @@ export function PortalAccessDialog({
     try {
       await onSubmit(password);
       setPassword("");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Something went wrong");
     } finally {
       setSubmitting(false);
     }

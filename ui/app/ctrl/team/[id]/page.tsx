@@ -363,10 +363,14 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
   };
 
   const handleRevokePortalAccess = async () => {
-    await cmsApi(`/api/team/${id}/portal-access`, { method: "DELETE" });
-    toast.success("Portal access revoked");
-    setRevokeConfirmOpen(false);
-    loadData();
+    try {
+      await cmsApi(`/api/team/${id}/portal-access`, { method: "DELETE" });
+      toast.success("Portal access revoked");
+      setRevokeConfirmOpen(false);
+      loadData();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to revoke portal access");
+    }
   };
 
   const openNewMeeting = () => {

@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
-import { requireAuth, requireSuperAdmin, AuthRequest } from "../middleware/auth";
+import { requireAuth, AuthRequest } from "../middleware/auth";
 import { uploadToBunny } from "../lib/bunny";
 
 export const teamRouter = Router();
@@ -212,11 +212,10 @@ teamRouter.put(
   }
 );
 
-// PROTECTED (SuperAdmin): Enable or reset time off portal access for a team member
+// PROTECTED: Enable or reset time off portal access for a team member
 teamRouter.put(
   "/:id/portal-access",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const id = req.params.id as string;
     const { password } = req.body;
@@ -245,11 +244,10 @@ teamRouter.put(
   }
 );
 
-// PROTECTED (SuperAdmin): Revoke time off portal access for a team member
+// PROTECTED: Revoke time off portal access for a team member
 teamRouter.delete(
   "/:id/portal-access",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const id = req.params.id as string;
 

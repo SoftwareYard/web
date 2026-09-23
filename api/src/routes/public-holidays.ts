@@ -1,6 +1,6 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
-import { requireAuth, requireSuperAdmin, AuthRequest } from "../middleware/auth";
+import { requireAuth, AuthRequest } from "../middleware/auth";
 
 export const publicHolidaysRouter = Router();
 
@@ -24,7 +24,6 @@ publicHolidaysRouter.get("/", async (req: Request, res: Response) => {
 publicHolidaysRouter.post(
   "/",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const { date, name } = req.body;
 
@@ -51,7 +50,6 @@ publicHolidaysRouter.post(
 publicHolidaysRouter.put(
   "/:id",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const id = String(req.params.id);
     const { date, name } = req.body;
@@ -84,7 +82,6 @@ publicHolidaysRouter.put(
 publicHolidaysRouter.delete(
   "/:id",
   requireAuth,
-  requireSuperAdmin,
   async (req: AuthRequest, res: Response) => {
     const id = String(req.params.id);
 
