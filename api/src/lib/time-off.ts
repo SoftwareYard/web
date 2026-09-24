@@ -21,16 +21,37 @@ export function countWorkingDays(
   return count;
 }
 
+// A public holiday that falls on a Sunday is observed on the next working day
+// (usually Monday), so that day is off too and must not count against the balance.
+export function withObservedHolidays(holidayDates: Iterable<string>): Set<string> {
+  const result = new Set(holidayDates);
+  for (const iso of [...result].sort()) {
+    const date = new Date(`${iso}T00:00:00.000Z`);
+    if (date.getUTCDay() !== 0) continue;
+    const cursor = new Date(date);
+    do {
+      cursor.setUTCDate(cursor.getUTCDate() + 1);
+    } while (
+      cursor.getUTCDay() === 0 ||
+      cursor.getUTCDay() === 6 ||
+      result.has(cursor.toISOString().split("T")[0])
+    );
+    result.add(cursor.toISOString().split("T")[0]);
+  }
+  return result;
+}
+
 export async function getHolidayDatesForYear(year: number): Promise<Set<string>> {
   const holidays = await prisma.publicHoliday.findMany({
     where: {
       date: {
-        gte: new Date(Date.UTC(year, 0, 1)),
+        // Include the last week of the prior year so a Sunday Dec 31 holiday carries into Jan
+        gte: new Date(Date.UTC(year - 1, 11, 25)),
         lt: new Date(Date.UTC(year + 1, 0, 1)),
       },
     },
   });
-  return new Set(holidays.map((h) => h.date.toISOString().split("T")[0]));
+  return withObservedHolidays(holidays.map((h) => h.date.toISOString().split("T")[0]));
 }
 
 export function isSameCalendarYear(start: Date, end: Date): boolean {

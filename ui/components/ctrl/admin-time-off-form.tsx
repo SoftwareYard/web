@@ -54,6 +54,7 @@ interface AdminTimeOffFormProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (values: AdminTimeOffFormValues) => Promise<void>;
   employees: Employee[];
+  defaultValues?: AdminTimeOffFormValues | null;
 }
 
 export function AdminTimeOffForm({
@@ -61,15 +62,17 @@ export function AdminTimeOffForm({
   onOpenChange,
   onSubmit,
   employees,
+  defaultValues,
 }: AdminTimeOffFormProps) {
+  const isEdit = !!defaultValues;
   const form = useForm<AdminTimeOffFormValues>({
     resolver: zodResolver(adminTimeOffSchema),
-    defaultValues: {
-      employeeId: "",
-      startDate: "",
-      endDate: "",
-      type: "Annual",
-      reason: "",
+    values: {
+      employeeId: defaultValues?.employeeId ?? "",
+      startDate: defaultValues?.startDate ?? "",
+      endDate: defaultValues?.endDate ?? "",
+      type: defaultValues?.type ?? "Annual",
+      reason: defaultValues?.reason ?? "",
     },
   });
 
@@ -82,7 +85,7 @@ export function AdminTimeOffForm({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-md">
         <DialogHeader>
-          <DialogTitle>Add Time Off</DialogTitle>
+          <DialogTitle>{isEdit ? "Edit Time Off" : "Add Time Off"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
@@ -92,7 +95,7 @@ export function AdminTimeOffForm({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Employee</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={isEdit}>
                     <FormControl>
                       <SelectTrigger className="w-full">
                         <SelectValue placeholder="Select an employee" />
@@ -183,6 +186,8 @@ export function AdminTimeOffForm({
               <Button type="submit" disabled={form.formState.isSubmitting}>
                 {form.formState.isSubmitting ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
+                ) : isEdit ? (
+                  "Save Changes"
                 ) : (
                   "Add"
                 )}

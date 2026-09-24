@@ -16,7 +16,7 @@ import {
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 
 type RequestStatus = "Pending" | "Approved" | "Rejected" | "Cancelled";
 type RequestType = "Annual" | "Special";
@@ -58,6 +58,7 @@ interface EmployeeTimeOffDialogProps {
   balanceSummary?: BalanceSummary;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onEdit: (id: string) => void;
   onDelete: (id: string) => void;
 }
 
@@ -69,6 +70,7 @@ export function EmployeeTimeOffDialog({
   balanceSummary,
   onApprove,
   onReject,
+  onEdit,
   onDelete,
 }: EmployeeTimeOffDialogProps) {
   return (
@@ -158,6 +160,9 @@ export function EmployeeTimeOffDialog({
                           </Button>
                         </>
                       )}
+                      <Button variant="ghost" size="icon" onClick={() => onEdit(r.id)}>
+                        <Pencil className="w-4 h-4" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => onDelete(r.id)}>
                         <Trash2 className="w-4 h-4" />
                       </Button>

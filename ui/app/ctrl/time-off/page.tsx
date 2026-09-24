@@ -100,6 +100,7 @@ export default function TimeOffAdminPage() {
   const [deleteHolidayId, setDeleteHolidayId] = useState<string | null>(null);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [addFormOpen, setAddFormOpen] = useState(false);
+  const [editingRequest, setEditingRequest] = useState<TimeOffRequestRow | null>(null);
   const [deleteRequestId, setDeleteRequestId] = useState<string | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<BalanceRow["employee"] | null>(null);
   const [employeeRequests, setEmployeeRequests] = useState<TimeOffRequestRow[]>([]);
@@ -203,6 +204,24 @@ export default function TimeOffAdminPage() {
       loadBalances();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to add time off");
+      throw err;
+    }
+  };
+
+  const handleUpdateRequest = async (values: AdminTimeOffFormValues) => {
+    if (!editingRequest) return;
+    try {
+      await cmsApi(`/api/time-off/admin/${editingRequest.id}`, {
+        method: "PUT",
+        body: JSON.stringify(values),
+      });
+      toast.success("Time off updated");
+      setEditingRequest(null);
+      loadRequests();
+      loadBalances();
+      if (selectedEmployee) loadEmployeeRequests(selectedEmployee.id);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update time off");
       throw err;
     }
   };
@@ -515,7 +534,26 @@ export default function TimeOffAdminPage() {
         balanceSummary={balances.find((b) => b.employee.id === selectedEmployee?.id)}
         onApprove={handleApprove}
         onReject={setRejectingId}
+        onEdit={(id) => setEditingRequest(employeeRequests.find((r) => r.id === id) ?? null)}
         onDelete={setDeleteRequestId}
+      />
+
+      <AdminTimeOffForm
+        open={!!editingRequest}
+        onOpenChange={(open) => !open && setEditingRequest(null)}
+        onSubmit={handleUpdateRequest}
+        employees={employees}
+        defaultValues={
+          editingRequest
+            ? {
+                employeeId: editingRequest.employee.id,
+                startDate: editingRequest.startDate.split("T")[0],
+                endDate: editingRequest.endDate.split("T")[0],
+                type: editingRequest.type,
+                reason: editingRequest.reason ?? "",
+              }
+            : null
+        }
       />
 
       <AlertDialog

@@ -13,6 +13,13 @@ import { Calendar } from "@/components/ui/calendar";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { cmsApi } from "@/lib/cms-api";
 import { Loader2 } from "lucide-react";
 
@@ -24,8 +31,11 @@ interface Holiday {
 export interface TimeOffFormValues {
   startDate: string;
   endDate: string;
+  type: TimeOffType;
   reason?: string;
 }
+
+type TimeOffType = "Annual" | "Special";
 
 interface TimeOffRequestFormProps {
   open: boolean;
@@ -37,6 +47,26 @@ interface TimeOffRequestFormProps {
 function parseHolidayDate(iso: string): Date {
   const [y, m, d] = iso.slice(0, 10).split("-").map(Number);
   return new Date(y, m - 1, d);
+}
+
+// A public holiday that falls on a Sunday is observed on the next working day
+// (usually Monday), so that day is off too and must not count against the balance.
+function withObservedHolidays(holidayDates: Iterable<string>): Set<string> {
+  const result = new Set(holidayDates);
+  for (const iso of [...result].sort()) {
+    const date = parseHolidayDate(iso);
+    if (date.getDay() !== 0) continue;
+    const cursor = new Date(date);
+    do {
+      cursor.setDate(cursor.getDate() + 1);
+    } while (
+      cursor.getDay() === 0 ||
+      cursor.getDay() === 6 ||
+      result.has(format(cursor, "yyyy-MM-dd"))
+    );
+    result.add(format(cursor, "yyyy-MM-dd"));
+  }
+  return result;
 }
 
 function countWorkingDays(range: DateRange | undefined, holidayDates: Set<string>): number {
@@ -63,6 +93,7 @@ export function TimeOffRequestForm({
   remainingDays,
 }: TimeOffRequestFormProps) {
   const [range, setRange] = useState<DateRange | undefined>(undefined);
+  const [type, setType] = useState<TimeOffType>("Annual");
   const [reason, setReason] = useState("");
   const [holidays, setHolidays] = useState<Holiday[]>([]);
   const [submitting, setSubmitting] = useState(false);
@@ -80,12 +111,12 @@ export function TimeOffRequestForm({
   }, [open]);
 
   const holidayDates = useMemo(
-    () => new Set(holidays.map((h) => h.date.slice(0, 10))),
+    () => withObservedHolidays(holidays.map((h) => h.date.slice(0, 10))),
     [holidays]
   );
   const holidayCalendarDates = useMemo(
-    () => holidays.map((h) => parseHolidayDate(h.date)),
-    [holidays]
+    () => [...holidayDates].map(parseHolidayDate),
+    [holidayDates]
   );
 
   const today = useMemo(() => {
@@ -95,7 +126,8 @@ export function TimeOffRequestForm({
   }, []);
 
   const workingDays = useMemo(() => countWorkingDays(range, holidayDates), [range, holidayDates]);
-  const exceedsBalance = workingDays > remainingDays;
+  // Special leave doesn't count against the annual balance
+  const exceedsBalance = type === "Annual" && workingDays > remainingDays;
 
   const handleSubmit = async () => {
     if (!range?.from || !range?.to) {
@@ -116,9 +148,11 @@ export function TimeOffRequestForm({
       await onSubmit({
         startDate: format(range.from, "yyyy-MM-dd"),
         endDate: format(range.to, "yyyy-MM-dd"),
+        type,
         reason: reason || undefined,
       });
       setRange(undefined);
+      setType("Annual");
       setReason("");
     } catch {
       // parent surfaces the error via toast
@@ -135,6 +169,19 @@ export function TimeOffRequestForm({
         </DialogHeader>
 
         <div className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="type">Type</Label>
+            <Select value={type} onValueChange={(v) => setType(v as TimeOffType)}>
+              <SelectTrigger id="type" className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Annual">Annual (counts against balance)</SelectItem>
+                <SelectItem value="Special">Special (wedding, funeral, etc.)</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex justify-center">
             <Calendar
               mode="range"
@@ -158,9 +205,13 @@ export function TimeOffRequestForm({
               <span className="font-medium">{workingDays}</span> working day
               {workingDays === 1 ? "" : "s"} requested
             </p>
-            <p className={exceedsBalance ? "text-destructive" : "text-muted-foreground"}>
-              {remainingDays} day{remainingDays === 1 ? "" : "s"} available
-            </p>
+            {type === "Annual" ? (
+              <p className={exceedsBalance ? "text-destructive" : "text-muted-foreground"}>
+                {remainingDays} day{remainingDays === 1 ? "" : "s"} available
+              </p>
+            ) : (
+              <p className="text-muted-foreground">Special leave doesn&apos;t count against your balance</p>
+            )}
           </div>
 
           <div className="space-y-2">

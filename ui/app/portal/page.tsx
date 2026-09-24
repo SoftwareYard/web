@@ -27,6 +27,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
 
@@ -63,8 +64,16 @@ interface OnLeave {
   id: string;
   startDate: string;
   endDate: string;
-  employee: { id: string; name: string };
+  employee: { id: string; name: string; image: string };
 }
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0].toUpperCase())
+    .join("");
 
 const formatShortDate = (date: string) =>
   new Date(date).toLocaleDateString("en-GB", {
@@ -216,10 +225,27 @@ export default function PortalPage() {
                 {onLeave.length === 0 ? (
                   <p className="text-sm text-muted-foreground">Nobody is on vacation today</p>
                 ) : (
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-2 text-sm">
                     {onLeave.map((l) => (
-                      <li key={l.id} className="flex justify-between gap-4 text-muted-foreground">
-                        <span>{l.employee.name}</span>
+                      <li
+                        key={l.id}
+                        className="flex items-center justify-between gap-4 text-muted-foreground"
+                      >
+                        <span className="flex items-center gap-2 min-w-0">
+                          <Avatar className="size-7">
+                            {l.employee.image && !l.employee.image.includes("placeholder") && (
+                              <AvatarImage
+                                src={l.employee.image}
+                                alt={l.employee.name}
+                                className="object-cover object-top"
+                              />
+                            )}
+                            <AvatarFallback className="text-xs">
+                              {initials(l.employee.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <span className="truncate">{l.employee.name}</span>
+                        </span>
                         <span className="shrink-0">
                           {formatShortDate(l.startDate)} – {formatShortDate(l.endDate)}
                         </span>

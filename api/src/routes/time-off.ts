@@ -35,7 +35,13 @@ const requestSelect = {
 };
 
 async function notifySuperAdminsOfNewRequest(
-  request: { startDate: Date; endDate: Date; workingDays: number; reason: string | null },
+  request: {
+    startDate: Date;
+    endDate: Date;
+    workingDays: number;
+    reason: string | null;
+    type: "Annual" | "Special";
+  },
   employee: { name: string; email: string | null }
 ) {
   const superAdmins = await prisma.adminUser.findMany({
@@ -51,6 +57,7 @@ async function notifySuperAdminsOfNewRequest(
       <h2>New Time Off Request</h2>
       <p><strong>Employee:</strong> ${employee.name} (${employee.email ?? "no email on file"})</p>
       <p><strong>Dates:</strong> ${request.startDate.toDateString()} - ${request.endDate.toDateString()}</p>
+      <p><strong>Type:</strong> ${request.type}</p>
       <p><strong>Working days:</strong> ${request.workingDays}</p>
       <p><strong>Reason:</strong> ${request.reason || "N/A"}</p>
     `,
@@ -135,7 +142,7 @@ timeOffRouter.get(
         id: true,
         startDate: true,
         endDate: true,
-        employee: { select: { id: true, name: true } },
+        employee: { select: { id: true, name: true, image: true } },
       },
       orderBy: { endDate: "asc" },
     });
@@ -145,7 +152,8 @@ timeOffRouter.get(
 );
 
 timeOffRouter.post("/", requireTeamMemberAuth, async (req: PortalAuthRequest, res: Response) => {
-  const { startDate: startInput, endDate: endInput, reason } = req.body;
+  const { startDate: startInput, endDate: endInput, reason, type } = req.body;
+  const requestType = type === "Special" ? "Special" : "Annual";
 
   const startDate = parseDate(startInput);
   const endDate = parseDate(endInput);
@@ -190,15 +198,18 @@ timeOffRouter.post("/", requireTeamMemberAuth, async (req: PortalAuthRequest, re
     return;
   }
 
-  const { remainingDays } = await computeRemainingBalance(
-    req.teamMemberId!,
-    startDate.getUTCFullYear()
-  );
-  if (workingDays > remainingDays) {
-    res.status(400).json({
-      error: `Insufficient time off balance. You have ${remainingDays} day(s) remaining.`,
-    });
-    return;
+  // Special leave (wedding, funeral, etc.) doesn't count against the annual balance
+  if (requestType === "Annual") {
+    const { remainingDays } = await computeRemainingBalance(
+      req.teamMemberId!,
+      startDate.getUTCFullYear()
+    );
+    if (workingDays > remainingDays) {
+      res.status(400).json({
+        error: `Insufficient time off balance. You have ${remainingDays} day(s) remaining.`,
+      });
+      return;
+    }
   }
 
   const request = await prisma.timeOffRequest.create({
@@ -208,6 +219,7 @@ timeOffRouter.post("/", requireTeamMemberAuth, async (req: PortalAuthRequest, re
       endDate,
       workingDays,
       reason: reason || null,
+      type: requestType,
     },
     select: requestSelect,
   });
@@ -279,6 +291,58 @@ timeOffRouter.get(
   }
 );
 
+async function validateAdminRange(
+  employeeId: string,
+  startInput: unknown,
+  endInput: unknown,
+  excludeId?: string
+): Promise<
+  | { startDate: Date; endDate: Date; workingDays: number }
+  | { status: number; error: string }
+> {
+  const startDate = parseDate(startInput);
+  const endDate = parseDate(endInput);
+
+  if (!startDate || !endDate) {
+    return { status: 400, error: "Start date and end date are required" };
+  }
+
+  if (endDate.getTime() < startDate.getTime()) {
+    return { status: 400, error: "End date must be on or after start date" };
+  }
+
+  if (!isSameCalendarYear(startDate, endDate)) {
+    return {
+      status: 400,
+      error: "Time off requests cannot span multiple calendar years — please add separate entries",
+    };
+  }
+
+  const holidayDates = await getHolidayDatesForYear(startDate.getUTCFullYear());
+  const workingDays = countWorkingDays(startDate, endDate, holidayDates);
+  if (workingDays === 0) {
+    return { status: 400, error: "Selected range contains no working days" };
+  }
+
+  const overlap = await prisma.timeOffRequest.findFirst({
+    where: {
+      employeeId,
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+      status: { in: ["Pending", "Approved"] },
+      startDate: { lte: endDate },
+      endDate: { gte: startDate },
+    },
+  });
+  if (overlap) {
+    return {
+      status: 409,
+      error: "This overlaps an existing pending or approved entry for this employee",
+    };
+  }
+
+  return { startDate, endDate, workingDays };
+}
+
 // Admin-entered records (historical backfill, or "Special" leave for weddings,
 // funerals, etc.) are created pre-approved and skip the balance check — the
 // SuperAdmin is trusting their own judgment, not asking themselves for approval.
@@ -307,48 +371,12 @@ timeOffRouter.post(
 
     const requestType = type === "Special" ? "Special" : "Annual";
 
-    const startDate = parseDate(startInput);
-    const endDate = parseDate(endInput);
-
-    if (!startDate || !endDate) {
-      res.status(400).json({ error: "Start date and end date are required" });
+    const range = await validateAdminRange(employeeId, startInput, endInput);
+    if ("error" in range) {
+      res.status(range.status).json({ error: range.error });
       return;
     }
-
-    if (endDate.getTime() < startDate.getTime()) {
-      res.status(400).json({ error: "End date must be on or after start date" });
-      return;
-    }
-
-    if (!isSameCalendarYear(startDate, endDate)) {
-      res.status(400).json({
-        error:
-          "Time off requests cannot span multiple calendar years — please add separate entries",
-      });
-      return;
-    }
-
-    const holidayDates = await getHolidayDatesForYear(startDate.getUTCFullYear());
-    const workingDays = countWorkingDays(startDate, endDate, holidayDates);
-    if (workingDays === 0) {
-      res.status(400).json({ error: "Selected range contains no working days" });
-      return;
-    }
-
-    const overlap = await prisma.timeOffRequest.findFirst({
-      where: {
-        employeeId,
-        status: { in: ["Pending", "Approved"] },
-        startDate: { lte: endDate },
-        endDate: { gte: startDate },
-      },
-    });
-    if (overlap) {
-      res.status(409).json({
-        error: "This overlaps an existing pending or approved entry for this employee",
-      });
-      return;
-    }
+    const { startDate, endDate, workingDays } = range;
 
     const request = await prisma.timeOffRequest.create({
       data: {
@@ -365,6 +393,42 @@ timeOffRouter.post(
     });
 
     res.status(201).json(request);
+  }
+);
+
+// Admin edits keep the entry's status and, like admin-created entries, skip the balance check
+timeOffRouter.put(
+  "/admin/:id",
+  requireAuth,
+  async (req: AuthRequest, res: Response) => {
+    const id = String(req.params.id);
+    const { startDate: startInput, endDate: endInput, reason, type } = req.body;
+
+    const existing = await prisma.timeOffRequest.findUnique({ where: { id } });
+    if (!existing) {
+      res.status(404).json({ error: "Request not found" });
+      return;
+    }
+
+    const range = await validateAdminRange(existing.employeeId, startInput, endInput, id);
+    if ("error" in range) {
+      res.status(range.status).json({ error: range.error });
+      return;
+    }
+
+    const request = await prisma.timeOffRequest.update({
+      where: { id },
+      data: {
+        startDate: range.startDate,
+        endDate: range.endDate,
+        workingDays: range.workingDays,
+        reason: reason || null,
+        type: type === "Special" ? "Special" : "Annual",
+      },
+      select: requestSelect,
+    });
+
+    res.json(request);
   }
 );
 
