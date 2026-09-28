@@ -40,7 +40,26 @@ const adminTimeOffSchema = z
   .refine((v) => v.endDate >= v.startDate, {
     message: "End date must be on or after start date",
     path: ["endDate"],
+  })
+  .refine((v) => v.startDate.slice(0, 4) === v.endDate.slice(0, 4), {
+    message: "Cannot span multiple calendar years — add separate entries",
+    path: ["endDate"],
+  })
+  .refine((v) => v.endDate < v.startDate || hasWeekday(v.startDate, v.endDate), {
+    message: "Selected range contains no working days",
+    path: ["endDate"],
   });
+
+function hasWeekday(startIso: string, endIso: string): boolean {
+  const cursor = new Date(`${startIso}T00:00:00Z`);
+  const end = new Date(`${endIso}T00:00:00Z`);
+  while (cursor.getTime() <= end.getTime()) {
+    const day = cursor.getUTCDay();
+    if (day !== 0 && day !== 6) return true;
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return false;
+}
 
 export type AdminTimeOffFormValues = z.infer<typeof adminTimeOffSchema>;
 
@@ -77,8 +96,15 @@ export function AdminTimeOffForm({
   });
 
   const handleSubmit = async (values: AdminTimeOffFormValues) => {
-    await onSubmit(values);
-    form.reset();
+    try {
+      await onSubmit(values);
+      form.reset();
+    } catch (err) {
+      // Server-side rejections (overlaps, holiday-only ranges) — show inline and keep the dialog open
+      form.setError("root", {
+        message: err instanceof Error ? err.message : "Failed to save time off",
+      });
+    }
   };
 
   return (
@@ -178,6 +204,10 @@ export function AdminTimeOffForm({
                 </FormItem>
               )}
             />
+
+            {form.formState.errors.root && (
+              <p className="text-destructive text-sm">{form.formState.errors.root.message}</p>
+            )}
 
             <div className="flex justify-end gap-2 pt-2">
               <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
