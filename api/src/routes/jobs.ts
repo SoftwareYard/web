@@ -48,6 +48,7 @@ jobsRouter.post("/", requireAuth, async (req: Request, res: Response) => {
     requirements,
     responsibilities,
     benefits,
+    goodToHave,
     postedDate,
     isActive,
   } = req.body;
@@ -62,6 +63,7 @@ jobsRouter.post("/", requireAuth, async (req: Request, res: Response) => {
       requirements: requirements || [],
       responsibilities: responsibilities || [],
       benefits: benefits || [],
+      goodToHave: goodToHave || [],
       postedDate: new Date(postedDate),
       isActive: isActive ?? true,
     },
@@ -82,6 +84,7 @@ jobsRouter.put("/:id", requireAuth, async (req: Request, res: Response) => {
     requirements,
     responsibilities,
     benefits,
+    goodToHave,
     postedDate,
     isActive,
   } = req.body;
@@ -97,6 +100,7 @@ jobsRouter.put("/:id", requireAuth, async (req: Request, res: Response) => {
       requirements,
       responsibilities,
       benefits,
+      goodToHave,
       postedDate: postedDate ? new Date(postedDate) : undefined,
       isActive,
     },

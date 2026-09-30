@@ -131,18 +131,20 @@ export default async function JobPage({ params }: JobPageProps) {
                 </ul>
               </div>
 
-              {/* Benefits */}
-              <div>
-                <h2 className="text-2xl font-semibold mb-4">Benefits</h2>
-                <ul className="space-y-3">
-                  {job.benefits.map((item, index) => (
-                    <li key={index} className="flex gap-3 text-muted-foreground">
-                      <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2.5 flex-shrink-0" />
-                      {item}
-                    </li>
-                  ))}
-                </ul>
-              </div>
+              {/* Good to have */}
+              {job.goodToHave?.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4">Good to have</h2>
+                  <ul className="space-y-3">
+                    {job.goodToHave.map((item, index) => (
+                      <li key={index} className="flex gap-3 text-muted-foreground">
+                        <span className="w-1.5 h-1.5 rounded-full bg-accent mt-2.5 flex-shrink-0" />
+                        {item}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
 
             {/* Sidebar - Apply Form */}

@@ -196,6 +196,7 @@ model Job {
   requirements     String[]
   responsibilities String[]
   benefits         String[]
+  goodToHave       String[] @default([]) @map("good_to_have")
   postedDate       DateTime @map("posted_date")
   isActive         Boolean  @default(true) @map("is_active")
   createdAt        DateTime @default(now()) @map("created_at")

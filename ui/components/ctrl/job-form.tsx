@@ -39,7 +39,7 @@ const jobSchema = z.object({
   description: z.string().min(1, "Description is required"),
   requirements: z.array(z.object({ value: z.string() })),
   responsibilities: z.array(z.object({ value: z.string() })),
-  benefits: z.array(z.object({ value: z.string() })),
+  goodToHave: z.array(z.object({ value: z.string() })),
   postedDate: z.string().min(1, "Date is required"),
   isActive: z.boolean().default(true),
 });
@@ -56,7 +56,7 @@ interface JobData {
   description: string;
   requirements: string[];
   responsibilities: string[];
-  benefits: string[];
+  goodToHave: string[];
   postedDate: string;
   isActive: boolean;
 }
@@ -73,7 +73,7 @@ interface JobFormProps {
     description: string;
     requirements: string[];
     responsibilities: string[];
-    benefits: string[];
+    goodToHave: string[];
     postedDate: string;
     isActive: boolean;
   }) => Promise<void>;
@@ -90,7 +90,7 @@ function toFormValues(job: JobData): JobFormValues {
     description: job.description,
     requirements: job.requirements.map((v) => ({ value: v })),
     responsibilities: job.responsibilities.map((v) => ({ value: v })),
-    benefits: job.benefits.map((v) => ({ value: v })),
+    goodToHave: (job.goodToHave ?? []).map((v) => ({ value: v })),
     postedDate: job.postedDate.split("T")[0],
     isActive: job.isActive,
   };
@@ -110,7 +110,7 @@ function ArrayField({
   control,
 }: {
   label: string;
-  name: "requirements" | "responsibilities" | "benefits";
+  name: "requirements" | "responsibilities" | "goodToHave";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   control: any;
 }) {
@@ -174,7 +174,7 @@ export function JobForm({
       description: "",
       requirements: [{ value: "" }],
       responsibilities: [{ value: "" }],
-      benefits: [{ value: "" }],
+      goodToHave: [{ value: "" }],
       postedDate: new Date().toISOString().split("T")[0],
       isActive: true,
     },
@@ -190,8 +190,8 @@ export function JobForm({
       responsibilities: values.responsibilities
         .map((r) => r.value)
         .filter((v) => v.trim()),
-      benefits: values.benefits
-        .map((b) => b.value)
+      goodToHave: values.goodToHave
+        .map((r) => r.value)
         .filter((v) => v.trim()),
     });
     form.reset();
@@ -328,8 +328,8 @@ export function JobForm({
               control={form.control}
             />
             <ArrayField
-              label="Benefits"
-              name="benefits"
+              label="Good to have"
+              name="goodToHave"
               control={form.control}
             />
 

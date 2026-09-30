@@ -37,7 +37,7 @@ interface Job {
   description: string;
   requirements: string[];
   responsibilities: string[];
-  benefits: string[];
+  goodToHave: string[];
   postedDate: string;
   isActive: boolean;
 }
