@@ -9,6 +9,7 @@ export interface Job {
   requirements: string[]
   responsibilities: string[]
   goodToHave: string[]
+  technology: { id: string; name: string } | null
   postedDate: string
 }
 

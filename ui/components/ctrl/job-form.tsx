@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useForm, useFieldArray } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -29,6 +30,7 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Loader2, Plus, X } from "lucide-react";
+import { cmsApi } from "@/lib/cms-api";
 
 const jobSchema = z.object({
   title: z.string().min(1, "Title is required"),
@@ -37,6 +39,7 @@ const jobSchema = z.object({
   location: z.string().min(1, "Location is required"),
   type: z.string().min(1, "Type is required"),
   description: z.string().min(1, "Description is required"),
+  technologyId: z.string().min(1, "Technology is required"),
   requirements: z.array(z.object({ value: z.string() })),
   responsibilities: z.array(z.object({ value: z.string() })),
   goodToHave: z.array(z.object({ value: z.string() })),
@@ -57,8 +60,14 @@ interface JobData {
   requirements: string[];
   responsibilities: string[];
   goodToHave: string[];
+  technologyId: string | null;
   postedDate: string;
   isActive: boolean;
+}
+
+interface Technology {
+  id: string;
+  name: string;
 }
 
 interface JobFormProps {
@@ -74,6 +83,7 @@ interface JobFormProps {
     requirements: string[];
     responsibilities: string[];
     goodToHave: string[];
+    technologyId: string;
     postedDate: string;
     isActive: boolean;
   }) => Promise<void>;
@@ -88,6 +98,7 @@ function toFormValues(job: JobData): JobFormValues {
     location: job.location,
     type: job.type,
     description: job.description,
+    technologyId: job.technologyId ?? "",
     requirements: job.requirements.map((v) => ({ value: v })),
     responsibilities: job.responsibilities.map((v) => ({ value: v })),
     goodToHave: (job.goodToHave ?? []).map((v) => ({ value: v })),
@@ -163,6 +174,39 @@ export function JobForm({
   onSubmit,
   defaultValues,
 }: JobFormProps) {
+  const [technologies, setTechnologies] = useState<Technology[]>([]);
+  const [newTechInput, setNewTechInput] = useState("");
+  const [addingTech, setAddingTech] = useState(false);
+
+  const loadTechnologies = () =>
+    cmsApi<Technology[]>("/api/technologies").then(setTechnologies).catch(() => {});
+
+  useEffect(() => {
+    if (open) loadTechnologies();
+  }, [open]);
+
+  const handleAddTech = async () => {
+    const name = newTechInput.trim();
+    if (!name) return;
+    const existing = technologies.find(
+      (t) => t.name.toLowerCase() === name.toLowerCase()
+    );
+    try {
+      const technology =
+        existing ??
+        (await cmsApi<Technology>("/api/technologies", {
+          method: "POST",
+          body: JSON.stringify({ name }),
+        }));
+      await loadTechnologies();
+      form.setValue("technologyId", technology.id, { shouldValidate: true });
+      setNewTechInput("");
+      setAddingTech(false);
+    } catch {
+      // technology already exists or other error
+    }
+  };
+
   const form = useForm<JobFormValues>({
     resolver: zodResolver(jobSchema),
     defaultValues: {
@@ -172,6 +216,7 @@ export function JobForm({
       location: "",
       type: "Full-time",
       description: "",
+      technologyId: "",
       requirements: [{ value: "" }],
       responsibilities: [{ value: "" }],
       goodToHave: [{ value: "" }],
@@ -302,6 +347,65 @@ export function JobForm({
                 )}
               />
             </div>
+
+            <FormField
+              control={form.control}
+              name="technologyId"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="flex items-center justify-between">
+                    <FormLabel>Technology</FormLabel>
+                    {!addingTech && (
+                      <button
+                        type="button"
+                        onClick={() => setAddingTech(true)}
+                        className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <Plus className="w-3 h-3" /> Add technology
+                      </button>
+                    )}
+                  </div>
+                  {addingTech ? (
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="New technology name"
+                        value={newTechInput}
+                        onChange={(e) => setNewTechInput(e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddTech())}
+                        autoFocus
+                      />
+                      <Button type="button" size="sm" onClick={handleAddTech}>
+                        Save
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => { setAddingTech(false); setNewTechInput(""); }}
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  ) : (
+                    <Select onValueChange={field.onChange} value={field.value ?? ""}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select technology" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {technologies.map((t) => (
+                          <SelectItem key={t.id} value={t.id}>
+                            {t.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               control={form.control}

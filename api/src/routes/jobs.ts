@@ -9,6 +9,7 @@ jobsRouter.get("/", async (req: Request, res: Response) => {
   const showAll = req.query.all === "true";
   const jobs = await prisma.job.findMany({
     where: showAll ? {} : { isActive: true },
+    include: { technology: true },
     orderBy: { postedDate: "desc" },
   });
   res.json(jobs);
@@ -17,7 +18,10 @@ jobsRouter.get("/", async (req: Request, res: Response) => {
 // PUBLIC: Get single job by slug
 jobsRouter.get("/by-slug/:slug", async (req: Request, res: Response) => {
   const slug = req.params.slug as string;
-  const job = await prisma.job.findUnique({ where: { slug } });
+  const job = await prisma.job.findUnique({
+    where: { slug },
+    include: { technology: true },
+  });
   if (!job) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -28,7 +32,10 @@ jobsRouter.get("/by-slug/:slug", async (req: Request, res: Response) => {
 // PROTECTED: Get single job by id (for editing)
 jobsRouter.get("/:id", requireAuth, async (req: Request, res: Response) => {
   const id = req.params.id as string;
-  const job = await prisma.job.findUnique({ where: { id } });
+  const job = await prisma.job.findUnique({
+    where: { id },
+    include: { technology: true },
+  });
   if (!job) {
     res.status(404).json({ error: "Not found" });
     return;
@@ -49,9 +56,14 @@ jobsRouter.post("/", requireAuth, async (req: Request, res: Response) => {
     responsibilities,
     benefits,
     goodToHave,
+    technologyId,
     postedDate,
     isActive,
   } = req.body;
+  if (!technologyId) {
+    res.status(400).json({ error: "technologyId is required" });
+    return;
+  }
   const job = await prisma.job.create({
     data: {
       slug,
@@ -64,6 +76,7 @@ jobsRouter.post("/", requireAuth, async (req: Request, res: Response) => {
       responsibilities: responsibilities || [],
       benefits: benefits || [],
       goodToHave: goodToHave || [],
+      technologyId,
       postedDate: new Date(postedDate),
       isActive: isActive ?? true,
     },
@@ -85,9 +98,14 @@ jobsRouter.put("/:id", requireAuth, async (req: Request, res: Response) => {
     responsibilities,
     benefits,
     goodToHave,
+    technologyId,
     postedDate,
     isActive,
   } = req.body;
+  if (!technologyId) {
+    res.status(400).json({ error: "technologyId is required" });
+    return;
+  }
   const job = await prisma.job.update({
     where: { id },
     data: {
@@ -101,6 +119,7 @@ jobsRouter.put("/:id", requireAuth, async (req: Request, res: Response) => {
       responsibilities,
       benefits,
       goodToHave,
+      technologyId,
       postedDate: postedDate ? new Date(postedDate) : undefined,
       isActive,
     },

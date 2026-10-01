@@ -91,35 +91,35 @@ model TimeOffBalance {
 }
 
 model TeamMember {
-  id                 String    @id @default(cuid())
-  name               String
-  role               String
-  image              String    @default("")
-  bio                String    @default("")
-  email              String?   @unique
-  phone              String?
-  password           String?
-  archiveNo          String?   @map("archive_no")
-  address            String?
-  city               String?
-  embg               String?
-  dateOfBirth        DateTime? @map("date_of_birth")
-  secondContactName  String?   @map("second_contact_name")
-  secondContactPhone String?   @map("second_contact_phone")
-  hireDate           DateTime? @map("hire_date")
-  currentSalaryEur   Float?    @map("current_salary_eur")
-  currentSalaryGross Float?    @map("current_salary_gross")
-  invoiceValue       Float?    @map("invoice_value")
-  managementFee      Float?    @map("management_fee")
-  contractInMonths   Int?      @map("contract_in_months")
-  lastContractDate   DateTime? @map("last_contract_date")
-  nextContractDate   DateTime? @map("next_contract_date")
-  contractDocumentUrl String?  @map("contract_document_url")
-  clientId           String?   @map("client_id")
-  client             Client?   @relation(fields: [clientId], references: [id])
-  sortOrder          Int       @default(0) @map("sort_order")
-  createdAt          DateTime  @default(now()) @map("created_at")
-  updatedAt          DateTime  @updatedAt @map("updated_at")
+  id                  String    @id @default(cuid())
+  name                String
+  role                String
+  image               String    @default("")
+  bio                 String    @default("")
+  email               String?   @unique
+  phone               String?
+  password            String?
+  archiveNo           String?   @map("archive_no")
+  address             String?
+  city                String?
+  embg                String?
+  dateOfBirth         DateTime? @map("date_of_birth")
+  secondContactName   String?   @map("second_contact_name")
+  secondContactPhone  String?   @map("second_contact_phone")
+  hireDate            DateTime? @map("hire_date")
+  currentSalaryEur    Float?    @map("current_salary_eur")
+  currentSalaryGross  Float?    @map("current_salary_gross")
+  invoiceValue        Float?    @map("invoice_value")
+  managementFee       Float?    @map("management_fee")
+  contractInMonths    Int?      @map("contract_in_months")
+  lastContractDate    DateTime? @map("last_contract_date")
+  nextContractDate    DateTime? @map("next_contract_date")
+  contractDocumentUrl String?   @map("contract_document_url")
+  clientId            String?   @map("client_id")
+  client              Client?   @relation(fields: [clientId], references: [id])
+  sortOrder           Int       @default(0) @map("sort_order")
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
 
   oneOnOneMeetings OneOnOneMeeting[]
   payrises         Payrise[]
@@ -132,12 +132,12 @@ model TeamMember {
 }
 
 model Client {
-  id           String     @id @default(cuid())
+  id           String   @id @default(cuid())
   title        String
-  contractDate DateTime   @map("contract_date")
+  contractDate DateTime @map("contract_date")
   domain       String
-  createdAt    DateTime   @default(now()) @map("created_at")
-  updatedAt    DateTime   @updatedAt @map("updated_at")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
 
   teamMembers TeamMember[]
 
@@ -186,8 +186,8 @@ model Payrise {
 }
 
 model Job {
-  id               String   @id @default(cuid())
-  slug             String   @unique
+  id               String      @id @default(cuid())
+  slug             String      @unique
   title            String
   department       String
   location         String
@@ -196,13 +196,26 @@ model Job {
   requirements     String[]
   responsibilities String[]
   benefits         String[]
-  goodToHave       String[] @default([]) @map("good_to_have")
-  postedDate       DateTime @map("posted_date")
-  isActive         Boolean  @default(true) @map("is_active")
-  createdAt        DateTime @default(now()) @map("created_at")
-  updatedAt        DateTime @updatedAt @map("updated_at")
+  goodToHave       String[]    @default([]) @map("good_to_have")
+  technologyId     String?     @map("technology_id")
+  technology       Technology? @relation(fields: [technologyId], references: [id])
+  postedDate       DateTime    @map("posted_date")
+  isActive         Boolean     @default(true) @map("is_active")
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
 
   @@map("jobs")
+}
+
+model Technology {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  jobs Job[]
+
+  @@map("technologies")
 }
 
 model CandidateRole {

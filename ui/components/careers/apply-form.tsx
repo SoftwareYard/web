@@ -10,6 +10,7 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001"
 
 interface ApplyFormProps {
   jobTitle: string
+  jobSlug: string
 }
 
 type FieldErrors = Record<string, string>
@@ -52,7 +53,7 @@ function validate(formData: FormData, file: File | null): FieldErrors {
   return errors
 }
 
-export function ApplyForm({ jobTitle }: ApplyFormProps) {
+export function ApplyForm({ jobTitle, jobSlug }: ApplyFormProps) {
   const [submitted, setSubmitted] = useState(false)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
@@ -101,6 +102,7 @@ export function ApplyForm({ jobTitle }: ApplyFormProps) {
 
     setSubmitting(true)
     formData.append("jobTitle", jobTitle)
+    formData.append("jobSlug", jobSlug)
 
     try {
       const res = await fetch(`${API_URL}/api/apply`, {

@@ -38,6 +38,8 @@ interface Job {
   requirements: string[];
   responsibilities: string[];
   goodToHave: string[];
+  technologyId: string | null;
+  technology: { id: string; name: string } | null;
   postedDate: string;
   isActive: boolean;
 }
@@ -57,7 +59,7 @@ export default function JobsPage() {
     loadJobs();
   }, [loadJobs]);
 
-  const handleCreate = async (values: Omit<Job, "id">) => {
+  const handleCreate = async (values: Omit<Job, "id" | "technology">) => {
     await cmsApi("/api/jobs", {
       method: "POST",
       body: JSON.stringify(values),
@@ -67,7 +69,7 @@ export default function JobsPage() {
     loadJobs();
   };
 
-  const handleUpdate = async (values: Omit<Job, "id">) => {
+  const handleUpdate = async (values: Omit<Job, "id" | "technology">) => {
     if (!editing) return;
     await cmsApi(`/api/jobs/${editing.id}`, {
       method: "PUT",
@@ -101,6 +103,7 @@ export default function JobsPage() {
           <TableHeader>
             <TableRow>
               <TableHead>Title</TableHead>
+              <TableHead>Technology</TableHead>
               <TableHead>Department</TableHead>
               <TableHead>Location</TableHead>
               <TableHead>Type</TableHead>
@@ -112,6 +115,11 @@ export default function JobsPage() {
             {jobs.map((job) => (
               <TableRow key={job.id}>
                 <TableCell className="font-medium">{job.title}</TableCell>
+                <TableCell>
+                  {job.technology?.name ?? (
+                    <span className="text-muted-foreground">Not set</span>
+                  )}
+                </TableCell>
                 <TableCell>{job.department}</TableCell>
                 <TableCell>{job.location}</TableCell>
                 <TableCell>
@@ -145,7 +153,7 @@ export default function JobsPage() {
             {jobs.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center text-muted-foreground py-8"
                 >
                   No job openings yet

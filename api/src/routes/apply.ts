@@ -39,6 +39,7 @@ applyRouter.post(
       phone,
       expectedSalary,
       jobTitle,
+      jobSlug,
       linkedin,
       github,
       coverLetter,
@@ -53,6 +54,14 @@ applyRouter.post(
       res.status(400).json({ error: "CV file is required" });
       return;
     }
+
+    const job = jobSlug
+      ? await prisma.job
+          .findUnique({ where: { slug: jobSlug }, include: { technology: true } })
+          .catch(() => null)
+      : null;
+    const technology = job?.technology?.name;
+    const position = technology ? `${jobTitle} (${technology})` : jobTitle;
 
     // Map job title to role and upload CV first, so the email can link to it
     // instead of attaching the PDF (attachments push mail into spam)
@@ -84,10 +93,10 @@ applyRouter.post(
       from: WEBSITE_SENDER,
       to: "careers@softwareyard.co",
       replyTo: email,
-      subject: `New applicant for ${jobTitle}`,
+      subject: `${position} - ${fullName}`,
       html: `
         <h2>New Job Application</h2>
-        <p><strong>Position:</strong> ${escapeHtml(jobTitle)}</p>
+        <p><strong>Position:</strong> ${escapeHtml(position)}</p>
         <p><strong>Name:</strong> ${escapeHtml(fullName)}</p>
         <p><strong>Email:</strong> ${escapeHtml(email)}</p>
         <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
@@ -102,7 +111,7 @@ applyRouter.post(
       text: [
         "New Job Application",
         "",
-        `Position: ${jobTitle}`,
+        `Position: ${position}`,
         `Name: ${fullName}`,
         `Email: ${email}`,
         `Phone: ${phone}`,

@@ -150,7 +150,7 @@ export default async function JobPage({ params }: JobPageProps) {
             {/* Sidebar - Apply Form */}
             <div className="lg:col-span-1">
               <div className="sticky top-32">
-                <ApplyForm jobTitle={job.title} />
+                <ApplyForm jobTitle={job.title} jobSlug={job.slug} />
               </div>
             </div>
           </div>
