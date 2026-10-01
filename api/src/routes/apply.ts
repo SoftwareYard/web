@@ -4,6 +4,7 @@ import multer from "multer";
 import { uploadToBunny } from "../lib/bunny";
 import { mapJobTitleToRole } from "../lib/role-mapper";
 import { prisma } from "../lib/prisma";
+import { WEBSITE_SENDER, escapeHtml, escapeMultiline } from "../lib/email";
 import { grossToNetMK, netToGrossMK } from "../services/salary.calculator.service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -53,29 +54,75 @@ applyRouter.post(
       return;
     }
 
+    // Map job title to role and upload CV first, so the email can link to it
+    // instead of attaching the PDF (attachments push mail into spam)
+    let roleId: string | null = null;
+    let cvLink = "";
+    try {
+      const role = await mapJobTitleToRole(jobTitle);
+      roleId = role.id;
+
+      // Upload CV to Bunny CDN under JobApplications/{RoleName}/
+      try {
+        cvLink = await uploadToBunny(
+          req.file.buffer,
+          req.file.originalname,
+          `JobApplications/${role.name}`
+        );
+      } catch (uploadError) {
+        console.error("Bunny CDN upload error:", uploadError);
+      }
+    } catch (roleError) {
+      console.error("Failed to map job title to role:", roleError);
+    }
+
+    const cvHtml = cvLink
+      ? `<a href="${escapeHtml(cvLink)}">${escapeHtml(req.file.originalname)}</a>`
+      : "Attached";
+
     const { error } = await resend.emails.send({
-      from: "SoftwareYard <noreply@softwareyard.co>",
+      from: WEBSITE_SENDER,
       to: "careers@softwareyard.co",
       replyTo: email,
       subject: `New applicant for ${jobTitle}`,
       html: `
         <h2>New Job Application</h2>
-        <p><strong>Name:</strong> ${fullName}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Phone:</strong> ${phone}</p>
-        <p><strong>Expected Salary:</strong> ${expectedSalary}</p>
-        <p><strong>LinkedIn:</strong> ${linkedin || "N/A"}</p>
-        <p><strong>GitHub:</strong> ${github || "N/A"}</p>
+        <p><strong>Position:</strong> ${escapeHtml(jobTitle)}</p>
+        <p><strong>Name:</strong> ${escapeHtml(fullName)}</p>
+        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
+        <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
+        <p><strong>Expected Salary:</strong> ${escapeHtml(expectedSalary)}</p>
+        <p><strong>LinkedIn:</strong> ${escapeHtml(linkedin || "N/A")}</p>
+        <p><strong>GitHub:</strong> ${escapeHtml(github || "N/A")}</p>
+        <p><strong>CV:</strong> ${cvHtml}</p>
         <hr />
         <p><strong>Cover Letter:</strong></p>
-        <p>${coverLetter || "N/A"}</p>
+        <p>${escapeMultiline(coverLetter || "N/A")}</p>
       `,
-      attachments: [
-        {
-          filename: req.file.originalname,
-          content: req.file.buffer,
-        },
-      ],
+      text: [
+        "New Job Application",
+        "",
+        `Position: ${jobTitle}`,
+        `Name: ${fullName}`,
+        `Email: ${email}`,
+        `Phone: ${phone}`,
+        `Expected Salary: ${expectedSalary}`,
+        `LinkedIn: ${linkedin || "N/A"}`,
+        `GitHub: ${github || "N/A"}`,
+        `CV: ${cvLink || "Attached"}`,
+        "",
+        "Cover Letter:",
+        coverLetter || "N/A",
+      ].join("\n"),
+      // Only fall back to attaching the CV when the upload failed
+      attachments: cvLink
+        ? undefined
+        : [
+            {
+              filename: req.file.originalname,
+              content: req.file.buffer,
+            },
+          ],
     });
 
     if (error) {
@@ -84,21 +131,8 @@ applyRouter.post(
       return;
     }
 
-    // Map job title to role, upload CV, and calculate salary
-    let cvLink = "";
     try {
-      const { id: roleId, name: roleName } = await mapJobTitleToRole(jobTitle);
-
-      // Upload CV to Bunny CDN under JobApplications/{RoleName}/
-      try {
-        cvLink = await uploadToBunny(
-          req.file.buffer,
-          req.file.originalname,
-          `JobApplications/${roleName}`
-        );
-      } catch (uploadError) {
-        console.error("Bunny CDN upload error:", uploadError);
-      }
+      if (!roleId) throw new Error(`No role for job title "${jobTitle}"`);
 
       const netEur = parseInt(expectedSalary, 10);
 
