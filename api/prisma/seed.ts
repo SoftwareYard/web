@@ -37,6 +37,7 @@ async function main() {
   // Seed candidate roles
   const candidateRoles = [
     "FullStack",
+    "BackEnd",
     "FrontEnd",
     "DevOPS",
     "QA",
