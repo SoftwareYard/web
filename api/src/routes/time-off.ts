@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { Resend } from "resend";
 import { prisma } from "../lib/prisma";
 import { Prisma } from "../generated/prisma/client";
+import { sendSlackDM } from "../lib/slack";
 import { requireAuth, requireSuperAdmin, AuthRequest } from "../middleware/auth";
 import { requireTeamMemberAuth, PortalAuthRequest } from "../middleware/portal-auth";
 import {
@@ -85,6 +86,32 @@ async function notifyEmployeeOfDecision(
     `,
   });
   if (error) console.error("[time-off] Resend error:", error);
+}
+
+const approvalMessages = [
+  (dates: string) => `Yey, your holiday ${dates} has been approved :tada: Enjoy your holiday!`,
+  (dates: string) => `Good news! Your time off ${dates} is approved :palm_tree: Time to recharge!`,
+  (dates: string) => `Pack your bags :luggage: your holiday ${dates} has been approved. Have a great time!`,
+  (dates: string) => `It's official :white_check_mark: your time off ${dates} is approved. Enjoy every minute!`,
+  (dates: string) => `Out of office mode: unlocked :sunglasses: Your holiday ${dates} has been approved. Have fun!`,
+  (dates: string) => `Woohoo! Your holiday ${dates} is approved :beach_with_umbrella: Relax and enjoy, we've got things covered!`,
+];
+
+function formatHolidayDates(startDate: Date, endDate: Date): string {
+  const format = (date: Date) =>
+    date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
+  return startDate.getTime() === endDate.getTime()
+    ? `on ${format(startDate)}`
+    : `from ${format(startDate)} to ${format(endDate)}`;
+}
+
+async function sendApprovalSlackDM(
+  request: { startDate: Date; endDate: Date },
+  employee: { email: string | null }
+) {
+  if (!employee.email) return;
+  const message = approvalMessages[Math.floor(Math.random() * approvalMessages.length)];
+  await sendSlackDM(employee.email, message(formatHolidayDates(request.startDate, request.endDate)));
 }
 
 // --- Employee (portal) routes ---
@@ -548,6 +575,9 @@ timeOffRouter.put(
 
     notifyEmployeeOfDecision(request, request.employee, "Approved").catch((err) =>
       console.error("[time-off] notify error", err)
+    );
+    sendApprovalSlackDM(request, request.employee).catch((err) =>
+      console.error("[time-off] Slack DM error", err)
     );
 
     res.json(request);

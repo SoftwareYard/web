@@ -1,6 +1,6 @@
 import cron from "node-cron";
 import { prisma } from "../lib/prisma";
-import { sendSlackMessage } from "../lib/slack";
+import { sendSlackMessage, sendSlackDM } from "../lib/slack";
 
 export interface UpcomingBirthday {
   id: string;
@@ -79,17 +79,77 @@ export async function checkTodaysBirthdays(): Promise<number> {
   return birthdayMembers.length;
 }
 
+const HEADS_UP_MESSAGE_TEMPLATES = [
+  (name: string, date: string) => `Psst :shushing_face: it's *${name}*'s birthday on ${date}. Make sure you make their day! :birthday:`,
+  (name: string, date: string) => `Heads up :eyes: *${name}* has a birthday coming up on ${date}. Get your best wishes ready! :tada:`,
+  (name: string, date: string) => `Shh, don't tell :zipper_mouth_face: *${name}* celebrates their birthday on ${date}. Let's make it a great one! :balloon:`,
+  (name: string, date: string) => `Quick reminder :alarm_clock: it's *${name}*'s birthday on ${date}. Don't forget to wish them well! :gift:`,
+  (name: string, date: string) => `Secret mission :sleuth_or_spy: *${name}*'s birthday is on ${date}. Help us make their day special! :cake:`,
+  (name: string, date: string) => `Mark your calendar :spiral_calendar_pad: *${name}* has a birthday on ${date}. A few kind words will go a long way! :confetti_ball:`,
+];
+
+function buildHeadsUpMessage(name: string, date: Date): string {
+  const template = HEADS_UP_MESSAGE_TEMPLATES[Math.floor(Math.random() * HEADS_UP_MESSAGE_TEMPLATES.length)];
+  const formatted = date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long", timeZone: "UTC" });
+  return template(name, formatted);
+}
+
+const HEADS_UP_DAYS_AHEAD = 3;
+
+// DMs every team member (except the birthday person) a few days ahead of a birthday
+export async function sendBirthdayHeadsUps(): Promise<number> {
+  const now = new Date();
+  const birthday = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + HEADS_UP_DAYS_AHEAD)
+  );
+
+  const members = await prisma.teamMember.findMany({
+    select: { id: true, name: true, email: true, dateOfBirth: true },
+  });
+
+  const birthdayMembers = members.filter(
+    (m) =>
+      m.dateOfBirth &&
+      m.dateOfBirth.getUTCMonth() === birthday.getUTCMonth() &&
+      m.dateOfBirth.getUTCDate() === birthday.getUTCDate()
+  );
+
+  if (birthdayMembers.length === 0) {
+    console.log(`[birthday-notice] No birthdays in ${HEADS_UP_DAYS_AHEAD} days.`);
+    return 0;
+  }
+
+  let sentCount = 0;
+  for (const birthdayMember of birthdayMembers) {
+    for (const recipient of members) {
+      if (recipient.id === birthdayMember.id || !recipient.email) continue;
+      try {
+        const sent = await sendSlackDM(recipient.email, buildHeadsUpMessage(birthdayMember.name, birthday));
+        if (sent) sentCount++;
+      } catch (err) {
+        console.error(`[birthday-notice] Failed to DM ${recipient.email}:`, err);
+      }
+    }
+  }
+
+  console.log(`[birthday-notice] Sent ${sentCount} birthday heads-up DM(s).`);
+  return sentCount;
+}
+
 export function startBirthdayNoticeCron() {
   cron.schedule(
-    "0 9 * * *",
+    "0 10 * * *",
     () => {
       console.log("[birthday-notice] Running daily birthday check...");
       checkTodaysBirthdays().catch((err) =>
         console.error("[birthday-notice] Error:", err)
       );
+      sendBirthdayHeadsUps().catch((err) =>
+        console.error("[birthday-notice] Heads-up error:", err)
+      );
     },
     { timezone: "Europe/Skopje" }
   );
 
-  console.log("[birthday-notice] Cron scheduled (daily at 09:00).");
+  console.log("[birthday-notice] Cron scheduled (daily at 10:00).");
 }
