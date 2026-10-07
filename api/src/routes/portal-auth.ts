@@ -26,7 +26,12 @@ portalAuthRouter.post("/login", async (req: Request, res: Response) => {
   }
 
   const member = await prisma.teamMember.findUnique({ where: { email } });
-  if (!member || !member.password || !(await bcrypt.compare(password, member.password))) {
+  if (
+    !member ||
+    !member.isActive ||
+    !member.password ||
+    !(await bcrypt.compare(password, member.password))
+  ) {
     res.status(401).json({ error: "Invalid credentials" });
     return;
   }

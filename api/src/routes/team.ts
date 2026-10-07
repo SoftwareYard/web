@@ -75,9 +75,11 @@ function sanitizePublicMember<
   return rest;
 }
 
-// PUBLIC: Get all team members
-teamRouter.get("/", async (_req: Request, res: Response) => {
+// PUBLIC: Get active team members (?includeInactive=true also returns deactivated ones, for the CMS)
+teamRouter.get("/", async (req: Request, res: Response) => {
+  const includeInactive = req.query.includeInactive === "true";
   const members = await prisma.teamMember.findMany({
+    where: includeInactive ? {} : { isActive: true },
     orderBy: { sortOrder: "asc" },
     include: { client: { select: { id: true, title: true } } },
   });
@@ -241,6 +243,28 @@ teamRouter.put(
     await prisma.teamMember.update({ where: { id }, data: { password: hashed } });
 
     res.json({ hasPortalAccess: true });
+  }
+);
+
+// PROTECTED: Deactivate or reactivate a team member (kept in the database, hidden from salaries, website, etc.)
+teamRouter.put(
+  "/:id/active",
+  requireAuth,
+  async (req: AuthRequest, res: Response) => {
+    const id = req.params.id as string;
+    const { isActive } = req.body;
+
+    if (typeof isActive !== "boolean") {
+      res.status(400).json({ error: "isActive must be true or false" });
+      return;
+    }
+
+    try {
+      await prisma.teamMember.update({ where: { id }, data: { isActive } });
+      res.json({ success: true });
+    } catch {
+      res.status(404).json({ error: "Not found" });
+    }
   }
 );
 

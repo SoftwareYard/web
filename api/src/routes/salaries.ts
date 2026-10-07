@@ -18,6 +18,7 @@ const salaryRowSelect = {
 
 salariesRouter.get("/", async (_req: AuthRequest, res: Response) => {
   const members = await prisma.teamMember.findMany({
+    where: { isActive: true },
     orderBy: { sortOrder: "asc" },
     select: salaryRowSelect,
   });

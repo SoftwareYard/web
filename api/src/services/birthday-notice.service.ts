@@ -25,7 +25,7 @@ function nextOccurrence(dob: Date, from: Date): { date: Date; daysUntil: number 
 
 export async function getUpcomingBirthdays(windowDays = 7): Promise<UpcomingBirthday[]> {
   const members = await prisma.teamMember.findMany({
-    where: { dateOfBirth: { not: null } },
+    where: { isActive: true, dateOfBirth: { not: null } },
     select: { id: true, name: true, image: true, dateOfBirth: true },
   });
 
@@ -58,7 +58,7 @@ export async function checkTodaysBirthdays(): Promise<number> {
   const day = now.getUTCDate();
 
   const members = await prisma.teamMember.findMany({
-    where: { dateOfBirth: { not: null } },
+    where: { isActive: true, dateOfBirth: { not: null } },
     select: { name: true, dateOfBirth: true },
   });
 
@@ -104,6 +104,7 @@ export async function sendBirthdayHeadsUps(): Promise<number> {
   );
 
   const members = await prisma.teamMember.findMany({
+    where: { isActive: true },
     select: { id: true, name: true, email: true, dateOfBirth: true },
   });
 

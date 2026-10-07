@@ -6,7 +6,7 @@ export async function checkOverdueContracts() {
   const now = new Date();
 
   const overdueMembers = await prisma.teamMember.findMany({
-    where: { nextContractDate: { lt: now } },
+    where: { isActive: true, nextContractDate: { lt: now } },
     orderBy: { nextContractDate: "asc" },
   });
 

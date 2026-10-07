@@ -536,6 +536,7 @@ timeOffRouter.get(
     const year = Number(req.query.year) || new Date().getFullYear();
 
     const employees = await prisma.teamMember.findMany({
+      where: { isActive: true },
       orderBy: { createdAt: "asc" },
     });
 

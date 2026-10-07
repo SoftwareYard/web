@@ -6,7 +6,7 @@ async function runYearlyCarryover() {
   const year = new Date().getFullYear();
 
   const employees = await prisma.teamMember.findMany({
-    where: { password: { not: null } },
+    where: { isActive: true, password: { not: null } },
   });
 
   for (const employee of employees) {

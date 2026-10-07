@@ -24,8 +24,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Plus, Eye, Trash2, FileSpreadsheet, AlertCircle, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Eye, Trash2, FileSpreadsheet, AlertCircle, X, UserX, UserCheck } from "lucide-react";
 import { toast } from "sonner";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
@@ -42,6 +50,7 @@ interface TeamMember {
   currentSalaryEur: number | null;
   nextContractDate: string | null;
   sortOrder: number;
+  isActive: boolean;
   client: { id: string; title: string } | null;
 }
 
@@ -52,12 +61,14 @@ function TeamPageInner() {
   const [formOpen, setFormOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [toggleMember, setToggleMember] = useState<TeamMember | null>(null);
   const [overdueOnly, setOverdueOnly] = useState(
     () => searchParams.get("overdue") === "true"
   );
 
   const loadMembers = useCallback(async () => {
-    const data = await cmsApi<TeamMember[]>("/api/team");
+    const data = await cmsApi<TeamMember[]>("/api/team?includeInactive=true");
     setMembers(data);
   }, []);
 
@@ -66,12 +77,21 @@ function TeamPageInner() {
   }, [loadMembers]);
 
   const filtered = useMemo(() => {
-    if (!overdueOnly) return members;
+    // Active members keep the API's sort order; inactive ones go to the bottom, alphabetically
+    const byStatus = members
+      .filter((m) =>
+        statusFilter === "all" ? true : statusFilter === "active" ? m.isActive : !m.isActive
+      )
+      .sort((a, b) => {
+        if (a.isActive !== b.isActive) return a.isActive ? -1 : 1;
+        return a.isActive ? 0 : a.name.localeCompare(b.name);
+      });
+    if (!overdueOnly) return byStatus;
     const now = new Date();
-    return members.filter(
+    return byStatus.filter(
       (m) => m.nextContractDate && new Date(m.nextContractDate) < now
     );
-  }, [members, overdueOnly]);
+  }, [members, overdueOnly, statusFilter]);
 
   const handleCreate = async (formData: FormData) => {
     const res = await fetch(`${API_URL}/api/team`, {
@@ -93,6 +113,22 @@ function TeamPageInner() {
     loadMembers();
   };
 
+  const handleToggleActive = async () => {
+    if (!toggleMember) return;
+    const isActive = !toggleMember.isActive;
+    try {
+      await cmsApi(`/api/team/${toggleMember.id}/active`, {
+        method: "PUT",
+        body: JSON.stringify({ isActive }),
+      });
+      toast.success(isActive ? "Team member reactivated" : "Team member deactivated");
+      setToggleMember(null);
+      loadMembers();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update team member");
+    }
+  };
+
   return (
     <CmsShell>
       <div className="flex items-center justify-between mb-6">
@@ -109,15 +145,30 @@ function TeamPageInner() {
         </div>
       </div>
 
-      {overdueOnly && (
-        <div className="flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-sm text-destructive w-fit mb-4">
-          <AlertCircle className="w-3.5 h-3.5" />
-          Overdue contracts only
-          <button onClick={() => setOverdueOnly(false)} className="ml-1">
-            <X className="w-3 h-3" />
-          </button>
-        </div>
-      )}
+      <div className="flex items-center gap-3 mb-4">
+        <Select
+          value={statusFilter}
+          onValueChange={(v) => setStatusFilter(v as "active" | "inactive" | "all")}
+        >
+          <SelectTrigger className="w-40">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="active">Active</SelectItem>
+            <SelectItem value="inactive">Inactive</SelectItem>
+            <SelectItem value="all">All</SelectItem>
+          </SelectContent>
+        </Select>
+        {overdueOnly && (
+          <div className="flex items-center gap-1 rounded-md border border-destructive/40 bg-destructive/10 px-2 py-1 text-sm text-destructive w-fit">
+            <AlertCircle className="w-3.5 h-3.5" />
+            Overdue contracts only
+            <button onClick={() => setOverdueOnly(false)} className="ml-1">
+              <X className="w-3 h-3" />
+            </button>
+          </div>
+        )}
+      </div>
 
       <div className="border rounded-lg">
         <Table>
@@ -130,7 +181,7 @@ function TeamPageInner() {
               <TableHead>Phone</TableHead>
               <TableHead>Client</TableHead>
               <TableHead>Next Contract Date</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
+              <TableHead className="w-32">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -139,7 +190,10 @@ function TeamPageInner() {
                 !!member.nextContractDate &&
                 new Date(member.nextContractDate) < new Date();
               return (
-              <TableRow key={member.id}>
+              <TableRow
+                key={member.id}
+                className={member.isActive ? undefined : "bg-muted/60 text-muted-foreground hover:bg-muted"}
+              >
                 <TableCell>
                   {member.image ? (
                     <img
@@ -155,8 +209,17 @@ function TeamPageInner() {
                     </div>
                   )}
                 </TableCell>
-                <TableCell className="text-muted-foreground">{member.sortOrder}</TableCell>
-                <TableCell className="font-medium">{member.name}</TableCell>
+                <TableCell className="text-muted-foreground">
+                  {member.isActive ? member.sortOrder : "—"}
+                </TableCell>
+                <TableCell className="font-medium">
+                  {member.name}
+                  {!member.isActive && (
+                    <Badge variant="outline" className="ml-2">
+                      Inactive
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell className="text-muted-foreground">
                   {member.email || "—"}
                 </TableCell>
@@ -183,6 +246,18 @@ function TeamPageInner() {
                     <Button
                       variant="ghost"
                       size="icon"
+                      title={member.isActive ? "Deactivate" : "Reactivate"}
+                      onClick={() => setToggleMember(member)}
+                    >
+                      {member.isActive ? (
+                        <UserX className="w-4 h-4" />
+                      ) : (
+                        <UserCheck className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
                       onClick={() => setDeleteId(member.id)}
                     >
                       <Trash2 className="w-4 h-4" />
@@ -198,7 +273,11 @@ function TeamPageInner() {
                   colSpan={8}
                   className="text-center text-muted-foreground py-8"
                 >
-                  {overdueOnly ? "No overdue contracts" : "No team members yet"}
+                  {overdueOnly
+                    ? "No overdue contracts"
+                    : statusFilter === "inactive"
+                      ? "No inactive team members"
+                      : "No team members yet"}
                 </TableCell>
               </TableRow>
             )}
@@ -213,6 +292,30 @@ function TeamPageInner() {
       />
 
       <ExportMeetingsDialog open={exportOpen} onOpenChange={setExportOpen} />
+
+      <AlertDialog
+        open={!!toggleMember}
+        onOpenChange={(open) => !open && setToggleMember(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {toggleMember?.isActive ? "Deactivate" : "Reactivate"} {toggleMember?.name}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {toggleMember?.isActive
+                ? "They'll be hidden from salaries, the website, time off balances and Slack notifications, and lose portal access. Nothing is deleted — you can reactivate them at any time."
+                : "They'll show up again on salaries, the website, time off balances and Slack notifications, and regain portal access."}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleToggleActive}>
+              {toggleMember?.isActive ? "Deactivate" : "Reactivate"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={!!deleteId}
