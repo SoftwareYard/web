@@ -3,6 +3,7 @@ import { prisma } from "./prisma";
 const ROLE_KEYWORDS: Record<string, string[]> = {
   FullStack: ["fullstack", "full-stack", "full stack"],
   BackEnd: ["backend", "back-end", "back end"],
+  "Mobile Developer": ["mobile", "ios", "android", "flutter", "react native", "react-native"],
   FrontEnd: ["frontend", "front-end", "front end", "ui", "ux", "designer"],
   DevOPS: ["devops", "dev-ops", "sre", "infrastructure", "platform"],
   QA: ["qa", "quality", "test", "tester"],

@@ -76,7 +76,7 @@ applyRouter.post(
         cvLink = await uploadToBunny(
           req.file.buffer,
           req.file.originalname,
-          `JobApplications/${role.name}`
+          `JobApplications/${role.name.replace(/\s+/g, "")}`
         );
       } catch (uploadError) {
         console.error("Bunny CDN upload error:", uploadError);

@@ -39,6 +39,7 @@ async function main() {
     "FullStack",
     "BackEnd",
     "FrontEnd",
+    "Mobile Developer",
     "DevOPS",
     "QA",
     "PM",
