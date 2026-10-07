@@ -9,10 +9,11 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2, Cake } from "lucide-react";
+import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2, Cake, DatabaseBackup } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { cmsApi } from "@/lib/cms-api";
+import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
 interface Invoice {
@@ -24,6 +25,12 @@ interface TeamMember {
   nextContractDate: string | null;
 }
 
+interface LatestBackup {
+  fileName: string;
+  sizeBytes: number;
+  createdAt: string;
+}
+
 interface UpcomingBirthday {
   id: string;
   name: string;
@@ -32,6 +39,7 @@ interface UpcomingBirthday {
 }
 
 export default function CtrlDashboard() {
+  const { admin } = useAuth();
   const [teamCount, setTeamCount] = useState(0);
   const [jobsCount, setJobsCount] = useState(0);
   const [overdueCount, setOverdueCount] = useState(0);
@@ -40,6 +48,18 @@ export default function CtrlDashboard() {
   const [sendingContracts, setSendingContracts] = useState(false);
   const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
   const [sendingBirthdays, setSendingBirthdays] = useState(false);
+  const [runningBackup, setRunningBackup] = useState(false);
+  const [latestBackup, setLatestBackup] = useState<LatestBackup | null>(null);
+  const [latestBackupError, setLatestBackupError] = useState(false);
+
+  const loadLatestBackup = useCallback(async () => {
+    try {
+      setLatestBackup(await cmsApi<LatestBackup | null>("/api/notifications/db-backup"));
+      setLatestBackupError(false);
+    } catch {
+      setLatestBackupError(true);
+    }
+  }, []);
 
   const handleSendInvoices = async () => {
     setSendingInvoices(true);
@@ -97,6 +117,26 @@ export default function CtrlDashboard() {
       setSendingBirthdays(false);
     }
   };
+
+  const handleRunBackup = async () => {
+    setRunningBackup(true);
+    try {
+      const { fileName, sizeBytes } = await cmsApi<{ fileName: string; sizeBytes: number }>(
+        "/api/notifications/db-backup",
+        { method: "POST" }
+      );
+      toast.success(`Backup uploaded: ${fileName} (${(sizeBytes / 1024 / 1024).toFixed(2)} MB)`);
+      loadLatestBackup();
+    } catch {
+      toast.error("Database backup failed");
+    } finally {
+      setRunningBackup(false);
+    }
+  };
+
+  useEffect(() => {
+    if (admin?.role === "SuperAdmin") loadLatestBackup();
+  }, [admin, loadLatestBackup]);
 
   useEffect(() => {
     cmsApi<TeamMember[]>("/api/team").then((data) => {
@@ -232,6 +272,40 @@ export default function CtrlDashboard() {
             </Button>
           </CardContent>
         </Card>
+        {admin?.role === "SuperAdmin" && (
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DatabaseBackup className="w-5 h-5" /> Database Backup
+              </CardTitle>
+              <CardDescription>Runs automatically every Friday at 02:00</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-sm text-muted-foreground mb-3">
+                {latestBackupError
+                  ? "Couldn't load the last backup"
+                  : latestBackup
+                    ? `Last backup: ${new Date(latestBackup.createdAt).toLocaleString("en-GB", {
+                        weekday: "short",
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })} (${(latestBackup.sizeBytes / 1024 / 1024).toFixed(2)} MB)`
+                    : "No backups yet"}
+              </p>
+              <Button size="sm" variant="outline" onClick={handleRunBackup} disabled={runningBackup}>
+                {runningBackup ? (
+                  <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+                ) : (
+                  <DatabaseBackup className="w-4 h-4 mr-1" />
+                )}
+                Back up now
+              </Button>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </CmsShell>
   );

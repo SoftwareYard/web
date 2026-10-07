@@ -1,8 +1,9 @@
 import { Router, Request, Response } from "express";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireSuperAdmin } from "../middleware/auth";
 import { checkOverdueInvoices } from "../services/overdue-invoices.service";
 import { checkOverdueContracts } from "../services/overdue-contracts.service";
 import { checkTodaysBirthdays } from "../services/birthday-notice.service";
+import { runDatabaseBackup, getLatestBackup } from "../services/db-backup.service";
 
 export const notificationsRouter = Router();
 
@@ -47,6 +48,37 @@ notificationsRouter.post(
     } catch (err) {
       console.error("[notifications] Manual birthdays trigger failed:", err);
       res.status(500).json({ error: "Failed to send Slack notification" });
+    }
+  }
+);
+
+// PROTECTED (SuperAdmin): Latest backup stored on Bunny (null if none yet)
+notificationsRouter.get(
+  "/db-backup",
+  requireAuth,
+  requireSuperAdmin,
+  async (_req: Request, res: Response) => {
+    try {
+      res.json(await getLatestBackup());
+    } catch (err) {
+      console.error("[notifications] Fetching latest db-backup failed:", err);
+      res.status(500).json({ error: "Failed to fetch latest backup" });
+    }
+  }
+);
+
+// PROTECTED (SuperAdmin): Run the database backup to Bunny now, outside the Friday schedule
+notificationsRouter.post(
+  "/db-backup",
+  requireAuth,
+  requireSuperAdmin,
+  async (_req: Request, res: Response) => {
+    try {
+      const { fileName, sizeBytes } = await runDatabaseBackup();
+      res.json({ fileName, sizeBytes });
+    } catch (err) {
+      console.error("[notifications] Manual db-backup trigger failed:", err);
+      res.status(500).json({ error: "Database backup failed" });
     }
   }
 );

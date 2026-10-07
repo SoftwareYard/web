@@ -3,7 +3,7 @@ import { spawn } from "child_process";
 import { sendSlackMessage } from "../lib/slack";
 
 const BACKUP_FOLDER = "db";
-const BACKUPS_TO_KEEP = 12;
+const BACKUPS_TO_KEEP = 10;
 
 function storageBaseUrl(): string {
   const zone = process.env.BUNNY_BACKUP_STORAGE_ZONE;
@@ -50,27 +50,51 @@ async function uploadBackup(fileName: string, data: Buffer): Promise<void> {
   }
 }
 
-async function deleteOldBackups(): Promise<number> {
-  const baseUrl = storageBaseUrl();
-  const headers = { AccessKey: process.env.BUNNY_BACKUP_API_KEY! };
+interface BunnyFile {
+  ObjectName: string;
+  IsDirectory: boolean;
+  Length: number;
+  LastChanged: string;
+}
 
-  const response = await fetch(baseUrl, { headers });
+// Oldest first — file names start with the date, so sorting by name sorts by date
+async function listBackups(): Promise<BunnyFile[]> {
+  const response = await fetch(storageBaseUrl(), {
+    headers: { AccessKey: process.env.BUNNY_BACKUP_API_KEY! },
+  });
   if (!response.ok) {
     throw new Error(`Bunny list failed (${response.status}): ${await response.text()}`);
   }
-  const files = (await response.json()) as { ObjectName: string; IsDirectory: boolean }[];
-
-  // File names start with the date, so sorting by name sorts oldest first
-  const backups = files
+  const files = (await response.json()) as BunnyFile[];
+  return files
     .filter((f) => !f.IsDirectory && f.ObjectName.endsWith(".dump"))
-    .map((f) => f.ObjectName)
-    .sort();
+    .sort((a, b) => a.ObjectName.localeCompare(b.ObjectName));
+}
+
+async function deleteOldBackups(): Promise<number> {
+  const backups = await listBackups();
   const toDelete = backups.slice(0, Math.max(0, backups.length - BACKUPS_TO_KEEP));
 
-  for (const name of toDelete) {
-    await fetch(`${baseUrl}${name}`, { method: "DELETE", headers });
+  for (const file of toDelete) {
+    await fetch(`${storageBaseUrl()}${file.ObjectName}`, {
+      method: "DELETE",
+      headers: { AccessKey: process.env.BUNNY_BACKUP_API_KEY! },
+    });
   }
   return toDelete.length;
+}
+
+export async function getLatestBackup(): Promise<{
+  fileName: string;
+  sizeBytes: number;
+  createdAt: string;
+} | null> {
+  const backups = await listBackups();
+  const latest = backups[backups.length - 1];
+  if (!latest) return null;
+  // Bunny returns LastChanged as UTC without a timezone suffix
+  const createdAt = new Date(`${latest.LastChanged.replace(/Z$/, "")}Z`).toISOString();
+  return { fileName: latest.ObjectName, sizeBytes: latest.Length, createdAt };
 }
 
 export async function runDatabaseBackup(): Promise<{ fileName: string; sizeBytes: number }> {
