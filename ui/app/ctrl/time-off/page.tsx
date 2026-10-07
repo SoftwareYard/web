@@ -37,7 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Search } from "lucide-react";
 import { toast } from "sonner";
 
 type RequestStatus = "Pending" | "Approved" | "Rejected" | "Cancelled";
@@ -55,6 +55,14 @@ interface TimeOffRequestRow {
   createdAt: string;
   employee: { id: string; name: string; email: string | null };
   reviewedBy: { id: string; name: string } | null;
+}
+
+interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 interface BalanceRow {
@@ -90,6 +98,11 @@ export default function TimeOffAdminPage() {
   const { admin } = useAuth();
   const [requests, setRequests] = useState<TimeOffRequestRow[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(10);
+  const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [balances, setBalances] = useState<BalanceRow[]>([]);
   const [balanceYear, setBalanceYear] = useState(new Date().getFullYear());
   const [rejectingId, setRejectingId] = useState<string | null>(null);
@@ -106,10 +119,20 @@ export default function TimeOffAdminPage() {
   const [employeeRequests, setEmployeeRequests] = useState<TimeOffRequestRow[]>([]);
 
   const loadRequests = useCallback(async () => {
-    const query = statusFilter !== "All" ? `?status=${statusFilter}` : "";
-    const data = await cmsApi<TimeOffRequestRow[]>(`/api/time-off/admin/requests${query}`);
-    setRequests(data);
-  }, [statusFilter]);
+    const params = new URLSearchParams({
+      page: String(page),
+      limit: String(limit),
+    });
+    if (statusFilter !== "All") params.set("status", statusFilter);
+    if (search) params.set("search", search);
+
+    const res = await cmsApi<PaginatedResponse<TimeOffRequestRow>>(
+      `/api/time-off/admin/requests?${params}`
+    );
+    setRequests(res.data);
+    setTotal(res.total);
+    setTotalPages(res.totalPages);
+  }, [statusFilter, search, page, limit]);
 
   const loadBalances = useCallback(async () => {
     const data = await cmsApi<BalanceRow[]>(`/api/time-off/admin/balances?year=${balanceYear}`);
@@ -162,6 +185,21 @@ export default function TimeOffAdminPage() {
       loadEmployeeRequests(selectedEmployee.id);
     }
   }, [selectedEmployee, loadEmployeeRequests]);
+
+  const handleSearch = (value: string) => {
+    setSearch(value);
+    setPage(1);
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setPage(1);
+  };
+
+  const handleLimitChange = (value: string) => {
+    setLimit(Number(value));
+    setPage(1);
+  };
 
   const handleApprove = async (id: string) => {
     try {
@@ -277,6 +315,9 @@ export default function TimeOffAdminPage() {
 
   if (!admin) return null;
 
+  const startRecord = (page - 1) * limit + 1;
+  const endRecord = Math.min(page * limit, total);
+
   return (
     <CmsShell>
       <h1 className="text-2xl font-bold mb-6">Time Off</h1>
@@ -289,19 +330,30 @@ export default function TimeOffAdminPage() {
         </TabsList>
 
         <TabsContent value="requests">
-          <div className="flex items-center justify-between mb-4">
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-40">
-                <SelectValue placeholder="Filter by status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="All">All</SelectItem>
-                <SelectItem value="Pending">Pending</SelectItem>
-                <SelectItem value="Approved">Approved</SelectItem>
-                <SelectItem value="Rejected">Rejected</SelectItem>
-                <SelectItem value="Cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <div className="flex flex-1 flex-col sm:flex-row gap-4">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search by name..."
+                  value={search}
+                  onChange={(e) => handleSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={handleStatusFilter}>
+                <SelectTrigger className="w-40">
+                  <SelectValue placeholder="Filter by status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="All">All</SelectItem>
+                  <SelectItem value="Pending">Pending</SelectItem>
+                  <SelectItem value="Approved">Approved</SelectItem>
+                  <SelectItem value="Rejected">Rejected</SelectItem>
+                  <SelectItem value="Cancelled">Cancelled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button size="sm" onClick={() => setAddFormOpen(true)}>
               <Plus className="w-4 h-4 mr-2" />
               Add Time Off
@@ -388,6 +440,50 @@ export default function TimeOffAdminPage() {
                 )}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="flex items-center justify-between mt-4">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span>
+                {total > 0
+                  ? `Showing ${startRecord}-${endRecord} of ${total}`
+                  : "No results"}
+              </span>
+              <Select value={String(limit)} onValueChange={handleLimitChange}>
+                <SelectTrigger className="w-[80px] h-8">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="10">10</SelectItem>
+                  <SelectItem value="25">25</SelectItem>
+                  <SelectItem value="50">50</SelectItem>
+                </SelectContent>
+              </Select>
+              <span>per page</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => p - 1)}
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <span className="text-sm px-2">
+                {page} / {totalPages || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
           </div>
         </TabsContent>
 

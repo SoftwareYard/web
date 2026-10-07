@@ -1,6 +1,7 @@
 import { Router, Response } from "express";
 import { Resend } from "resend";
 import { prisma } from "../lib/prisma";
+import { Prisma } from "../generated/prisma/client";
 import { requireAuth, requireSuperAdmin, AuthRequest } from "../middleware/auth";
 import { requireTeamMemberAuth, PortalAuthRequest } from "../middleware/portal-auth";
 import {
@@ -269,25 +270,79 @@ timeOffRouter.get(
   requireAuth,
   async (req: AuthRequest, res: Response) => {
     const { status, year, employeeId } = req.query;
+    const search = (req.query.search as string) || "";
 
-    const requests = await prisma.timeOffRequest.findMany({
-      where: {
-        ...(employeeId ? { employeeId: employeeId as string } : {}),
-        ...(status ? { status: status as "Pending" | "Approved" | "Rejected" | "Cancelled" } : {}),
-        ...(year
-          ? {
-              startDate: {
-                gte: new Date(Date.UTC(Number(year), 0, 1)),
-                lt: new Date(Date.UTC(Number(year) + 1, 0, 1)),
-              },
-            }
-          : {}),
-      },
-      select: requestSelect,
-      orderBy: { startDate: "desc" },
+    const where: Prisma.TimeOffRequestWhereInput = {
+      ...(employeeId ? { employeeId: employeeId as string } : {}),
+      ...(status ? { status: status as "Pending" | "Approved" | "Rejected" | "Cancelled" } : {}),
+      ...(search ? { employee: { name: { contains: search, mode: "insensitive" } } } : {}),
+      ...(year
+        ? {
+            startDate: {
+              gte: new Date(Date.UTC(Number(year), 0, 1)),
+              lt: new Date(Date.UTC(Number(year) + 1, 0, 1)),
+            },
+          }
+        : {}),
+    };
+
+    // Unpaginated (used by the per-employee history dialog)
+    if (!req.query.page) {
+      const requests = await prisma.timeOffRequest.findMany({
+        where,
+        select: requestSelect,
+        orderBy: { startDate: "desc" },
+      });
+      res.json(requests);
+      return;
+    }
+
+    const page = Math.max(1, parseInt(req.query.page as string) || 1);
+    const limit = [10, 25, 50].includes(Number(req.query.limit))
+      ? Number(req.query.limit)
+      : 10;
+    const skip = (page - 1) * limit;
+
+    // Pending requests first, then everything else; each bucket newest-requested first
+    const pendingWhere: Prisma.TimeOffRequestWhereInput = { AND: [where, { status: "Pending" }] };
+    const otherWhere: Prisma.TimeOffRequestWhereInput = { AND: [where, { status: { not: "Pending" } }] };
+
+    const [pendingTotal, otherTotal] = await Promise.all([
+      prisma.timeOffRequest.count({ where: pendingWhere }),
+      prisma.timeOffRequest.count({ where: otherWhere }),
+    ]);
+
+    const pending =
+      skip < pendingTotal
+        ? await prisma.timeOffRequest.findMany({
+            where: pendingWhere,
+            select: requestSelect,
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+          })
+        : [];
+
+    const otherTake = limit - pending.length;
+    const others =
+      otherTake > 0
+        ? await prisma.timeOffRequest.findMany({
+            where: otherWhere,
+            select: requestSelect,
+            orderBy: { createdAt: "desc" },
+            skip: Math.max(0, skip - pendingTotal),
+            take: otherTake,
+          })
+        : [];
+
+    const total = pendingTotal + otherTotal;
+    res.json({
+      data: [...pending, ...others],
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
     });
-
-    res.json(requests);
   }
 );
 
