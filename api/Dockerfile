@@ -11,6 +11,9 @@ RUN npm run build
 FROM node:20-alpine
 WORKDIR /app
 
+# pg_dump for the weekly database backup — must match or be newer than the server (PostgreSQL 16)
+RUN apk add --no-cache postgresql16-client
+
 COPY package*.json ./
 RUN npm ci --omit=dev
 
