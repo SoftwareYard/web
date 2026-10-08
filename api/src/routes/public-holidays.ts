@@ -1,6 +1,10 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth, AuthRequest } from "../middleware/auth";
+import {
+  getNextNonWorkingDay,
+  sendHolidayNotice,
+} from "../services/holiday-notice.service";
 
 export const publicHolidaysRouter = Router();
 
@@ -20,6 +24,41 @@ publicHolidaysRouter.get("/", async (req: Request, res: Response) => {
 
   res.json(holidays);
 });
+
+// Next upcoming non-working day (a holiday, or the day a Sunday holiday is moved to)
+publicHolidaysRouter.get(
+  "/next",
+  requireAuth,
+  async (_req: AuthRequest, res: Response) => {
+    res.json(await getNextNonWorkingDay());
+  }
+);
+
+// Posts the Slack notice for the next upcoming non-working day
+publicHolidaysRouter.post(
+  "/next/notify",
+  requireAuth,
+  async (_req: AuthRequest, res: Response) => {
+    if (!process.env.SLACK_GENERAL_WEBHOOK_URL) {
+      res.status(500).json({ error: "Slack webhook is not configured" });
+      return;
+    }
+
+    const day = await getNextNonWorkingDay();
+    if (!day) {
+      res.status(404).json({ error: "No upcoming holiday found" });
+      return;
+    }
+
+    try {
+      await sendHolidayNotice(day);
+      res.json(day);
+    } catch (err) {
+      console.error("[holiday-notice] Manual send failed:", err);
+      res.status(502).json({ error: "Failed to send Slack message" });
+    }
+  }
+);
 
 publicHolidaysRouter.post(
   "/",

@@ -25,7 +25,15 @@ export function countWorkingDays(
 // (usually Monday), so that day is off too and must not count against the balance.
 export function withObservedHolidays(holidayDates: Iterable<string>): Set<string> {
   const result = new Set(holidayDates);
-  for (const iso of [...result].sort()) {
+  for (const observed of observedHolidayMap(result).keys()) result.add(observed);
+  return result;
+}
+
+// Maps each observed day (ISO date) to the Sunday holiday (ISO date) it replaces.
+export function observedHolidayMap(holidayDates: Iterable<string>): Map<string, string> {
+  const taken = new Set(holidayDates);
+  const observed = new Map<string, string>();
+  for (const iso of [...taken].sort()) {
     const date = new Date(`${iso}T00:00:00.000Z`);
     if (date.getUTCDay() !== 0) continue;
     const cursor = new Date(date);
@@ -34,11 +42,13 @@ export function withObservedHolidays(holidayDates: Iterable<string>): Set<string
     } while (
       cursor.getUTCDay() === 0 ||
       cursor.getUTCDay() === 6 ||
-      result.has(cursor.toISOString().split("T")[0])
+      taken.has(cursor.toISOString().split("T")[0])
     );
-    result.add(cursor.toISOString().split("T")[0]);
+    const observedIso = cursor.toISOString().split("T")[0];
+    taken.add(observedIso);
+    observed.set(observedIso, iso);
   }
-  return result;
+  return observed;
 }
 
 export async function getHolidayDatesForYear(year: number): Promise<Set<string>> {

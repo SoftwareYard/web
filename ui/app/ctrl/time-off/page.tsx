@@ -37,7 +37,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, ChevronLeft, ChevronRight, Search, Send } from "lucide-react";
 import { toast } from "sonner";
 
 type RequestStatus = "Pending" | "Approved" | "Rejected" | "Cancelled";
@@ -82,6 +82,22 @@ interface Holiday {
   name: string;
 }
 
+interface NonWorkingDay {
+  date: string;
+  name: string;
+  observedFrom: string | null;
+}
+
+function formatHolidayDate(iso: string) {
+  return new Date(`${iso}T00:00:00.000Z`).toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+    timeZone: "UTC",
+  });
+}
+
 interface Employee {
   id: string;
   name: string;
@@ -111,6 +127,9 @@ export default function TimeOffAdminPage() {
   const [holidayFormOpen, setHolidayFormOpen] = useState(false);
   const [editingHoliday, setEditingHoliday] = useState<Holiday | null>(null);
   const [deleteHolidayId, setDeleteHolidayId] = useState<string | null>(null);
+  const [nextHoliday, setNextHoliday] = useState<NonWorkingDay | null>(null);
+  const [noticeDialogOpen, setNoticeDialogOpen] = useState(false);
+  const [sendingNotice, setSendingNotice] = useState(false);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [addFormOpen, setAddFormOpen] = useState(false);
   const [editingRequest, setEditingRequest] = useState<TimeOffRequestRow | null>(null);
@@ -302,6 +321,35 @@ export default function TimeOffAdminPage() {
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update holiday");
       throw err;
+    }
+  };
+
+  const openNoticeDialog = async () => {
+    try {
+      const day = await cmsApi<NonWorkingDay | null>("/api/public-holidays/next");
+      if (!day) {
+        toast.error("No upcoming holiday found");
+        return;
+      }
+      setNextHoliday(day);
+      setNoticeDialogOpen(true);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to load next holiday");
+    }
+  };
+
+  const handleSendNotice = async () => {
+    setSendingNotice(true);
+    try {
+      const day = await cmsApi<NonWorkingDay>("/api/public-holidays/next/notify", {
+        method: "POST",
+      });
+      toast.success(`Notice sent for ${formatHolidayDate(day.date)}`);
+      setNoticeDialogOpen(false);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to send notice");
+    } finally {
+      setSendingNotice(false);
     }
   };
 
@@ -549,10 +597,16 @@ export default function TimeOffAdminPage() {
               value={holidayYear}
               onChange={(e) => setHolidayYear(Number(e.target.value) || new Date().getFullYear())}
             />
-            <Button size="sm" onClick={() => setHolidayFormOpen(true)}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Holiday
-            </Button>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={openNoticeDialog}>
+                <Send className="w-4 h-4 mr-2" />
+                Notify Next Holiday
+              </Button>
+              <Button size="sm" onClick={() => setHolidayFormOpen(true)}>
+                <Plus className="w-4 h-4 mr-2" />
+                New Holiday
+              </Button>
+            </div>
           </div>
 
           <div className="border rounded-lg">
@@ -686,6 +740,27 @@ export default function TimeOffAdminPage() {
             : null
         }
       />
+
+      <AlertDialog open={noticeDialogOpen} onOpenChange={setNoticeDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Send holiday notice to Slack?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {nextHoliday &&
+                (nextHoliday.observedFrom
+                  ? `${formatHolidayDate(nextHoliday.date)} is a non-working day, as “${nextHoliday.name}” falls on ${formatHolidayDate(nextHoliday.observedFrom)}.`
+                  : `${formatHolidayDate(nextHoliday.date)} — “${nextHoliday.name}”.`)}{" "}
+              The message will be posted to the general channel.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={sendingNotice}>Cancel</AlertDialogCancel>
+            <Button onClick={handleSendNotice} disabled={sendingNotice}>
+              {sendingNotice ? "Sending..." : "Send"}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={!!deleteHolidayId}
