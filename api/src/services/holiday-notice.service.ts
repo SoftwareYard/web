@@ -69,7 +69,8 @@ async function loadNonWorkingDays(from: string, to: string): Promise<NonWorkingD
 export async function getNextNonWorkingDay(): Promise<NonWorkingDay | null> {
   const tomorrow = toIsoDate(addDays(new Date(), 1));
   const days = await loadNonWorkingDays(tomorrow, isoAddDays(tomorrow, 366));
-  return days[0] ?? null;
+  // A holiday on a weekend is not a day off from work; a Sunday one is announced via its observed day
+  return days.find((d) => ![0, 6].includes(utcDate(d.date).getUTCDay())) ?? null;
 }
 
 export function buildHolidayMessage(day: NonWorkingDay): string {
