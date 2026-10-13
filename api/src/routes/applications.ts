@@ -27,6 +27,14 @@ applicationsRouter.get(
       where.roleId = roleId;
     }
 
+    // Blocked applicants only show up in the blocked list
+    const blocked = await prisma.blockedApplicant.findMany({ select: { email: true } });
+    if (blocked.length) {
+      where.NOT = {
+        OR: blocked.map(({ email }) => ({ email: { equals: email, mode: "insensitive" } })),
+      };
+    }
+
     const [applications, total] = await Promise.all([
       prisma.jobApplication.findMany({
         where,
