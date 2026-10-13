@@ -55,6 +55,16 @@ applyRouter.post(
       return;
     }
 
+    // Blocked applicants get a normal-looking response so they aren't tipped off
+    const blocked = await prisma.blockedApplicant.findUnique({
+      where: { email: String(email).trim().toLowerCase() },
+    });
+    if (blocked) {
+      console.log(`Ignored application from blocked email ${blocked.email}`);
+      res.json({ success: true });
+      return;
+    }
+
     const job = jobSlug
       ? await prisma.job
           .findUnique({ where: { slug: jobSlug }, include: { technology: true } })

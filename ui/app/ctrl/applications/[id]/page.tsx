@@ -8,12 +8,29 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ExternalLink } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Ban, ChevronLeft, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 interface CandidateRole {
   id: string;
   name: string;
+}
+
+interface BlockedApplicant {
+  id: string;
+  email: string;
+  reason: string | null;
+  createdAt: string;
 }
 
 interface JobApplication {
@@ -36,6 +53,7 @@ interface JobApplication {
   hrNotes: string | null;
   techNotes: string | null;
   createdAt: string;
+  blocked: BlockedApplicant | null;
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -58,6 +76,8 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
   const [secondInterviewTime, setSecondInterviewTime] = useState("");
   const [saving, setSaving] = useState(false);
   const [savingInterviews, setSavingInterviews] = useState(false);
+  const [blockOpen, setBlockOpen] = useState(false);
+  const [blockReason, setBlockReason] = useState("");
 
   const toDatetimeLocal = (iso: string | null) => {
     if (!iso) return "";
@@ -91,6 +111,31 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
       toast.error("Failed to save interviews");
     } finally {
       setSavingInterviews(false);
+    }
+  };
+
+  const handleBlock = async () => {
+    try {
+      const blocked = await cmsApi<BlockedApplicant>(`/api/applications/${id}/block`, {
+        method: "POST",
+        body: JSON.stringify({ reason: blockReason }),
+      });
+      setApp((prev) => (prev ? { ...prev, blocked } : prev));
+      setBlockReason("");
+      toast.success(`${blocked.email} blocked`);
+    } catch {
+      toast.error("Failed to block applicant");
+    }
+  };
+
+  const handleUnblock = async () => {
+    if (!app?.blocked) return;
+    try {
+      await cmsApi(`/api/applications/blocked/${app.blocked.id}`, { method: "DELETE" });
+      setApp((prev) => (prev ? { ...prev, blocked: null } : prev));
+      toast.success("Applicant unblocked");
+    } catch {
+      toast.error("Failed to unblock applicant");
     }
   };
 
@@ -138,8 +183,27 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             <h1 className="text-2xl font-bold">{app.fullName}</h1>
             <p className="text-muted-foreground text-sm mt-1">{app.jobTitle}</p>
           </div>
-          {app.role && <Badge variant="secondary">{app.role.name}</Badge>}
+          <div className="flex items-center gap-2">
+            {app.role && <Badge variant="secondary">{app.role.name}</Badge>}
+            {app.blocked ? (
+              <Button variant="outline" size="sm" onClick={handleUnblock}>
+                Unblock
+              </Button>
+            ) : (
+              <Button variant="destructive" size="sm" onClick={() => setBlockOpen(true)}>
+                <Ban className="w-3.5 h-3.5 mr-2" />
+                Block
+              </Button>
+            )}
+          </div>
         </div>
+        {app.blocked && (
+          <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm">
+            <span className="font-medium text-destructive">Blocked</span> since {formatDate(app.blocked.createdAt)} —
+            new applications from {app.blocked.email} are ignored.
+            {app.blocked.reason && <p className="mt-1 text-muted-foreground">Reason: {app.blocked.reason}</p>}
+          </div>
+        )}
       </div>
 
       <div className="grid gap-6">
@@ -258,6 +322,28 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
           </div>
         </div>
       </div>
+
+      <AlertDialog open={blockOpen} onOpenChange={setBlockOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Block {app.fullName}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              New applications from {app.email} will be ignored. You can unblock them later from the blocked list.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Textarea
+            value={blockReason}
+            onChange={(e) => setBlockReason(e.target.value)}
+            rows={3}
+            className="resize-none"
+            placeholder="Reason (optional)"
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleBlock}>Block</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </CmsShell>
   );
 }

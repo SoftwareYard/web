@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, ChevronLeft, ChevronRight, Search } from "lucide-react";
 
 interface CandidateRole {
   id: string;
@@ -61,6 +61,7 @@ export default function ApplicationsPage() {
   const [limit, setLimit] = useState(10);
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
 
   const loadRoles = useCallback(async () => {
     const data = await cmsApi<CandidateRole[]>("/api/applications/roles");
@@ -71,6 +72,7 @@ export default function ApplicationsPage() {
     const params = new URLSearchParams({
       page: String(page),
       limit: String(limit),
+      sortDir,
     });
     if (search) params.set("search", search);
     if (roleFilter) params.set("roleId", roleFilter);
@@ -81,7 +83,7 @@ export default function ApplicationsPage() {
     setApplications(res.data);
     setTotal(res.total);
     setTotalPages(res.totalPages);
-  }, [page, limit, search, roleFilter]);
+  }, [page, limit, search, roleFilter, sortDir]);
 
   useEffect(() => {
     loadRoles();
@@ -98,6 +100,11 @@ export default function ApplicationsPage() {
 
   const handleRoleFilter = (value: string) => {
     setRoleFilter(value === "all" ? "" : value);
+    setPage(1);
+  };
+
+  const toggleSort = () => {
+    setSortDir((d) => (d === "desc" ? "asc" : "desc"));
     setPage(1);
   };
 
@@ -122,6 +129,10 @@ export default function ApplicationsPage() {
     <CmsShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Job Applications</h1>
+        <Button variant="outline" onClick={() => router.push("/ctrl/applications/blocked")}>
+          <Ban className="w-4 h-4 mr-2" />
+          Blocked list
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
@@ -159,6 +170,20 @@ export default function ApplicationsPage() {
               <TableHead>Net Salary (EUR)</TableHead>
               <TableHead>Gross Salary (EUR)</TableHead>
               <TableHead>HR Interview</TableHead>
+              <TableHead>
+                <button
+                  type="button"
+                  onClick={toggleSort}
+                  className="inline-flex items-center gap-1 hover:text-foreground"
+                >
+                  Applied On
+                  {sortDir === "desc" ? (
+                    <ArrowDown className="w-3.5 h-3.5" />
+                  ) : (
+                    <ArrowUp className="w-3.5 h-3.5" />
+                  )}
+                </button>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -176,12 +201,13 @@ export default function ApplicationsPage() {
                 <TableCell>{app.salaryNetEur.toLocaleString()}</TableCell>
                 <TableCell>{app.salaryGrossEur.toLocaleString()}</TableCell>
                 <TableCell>{formatDate(app.hrInterviewTime)}</TableCell>
+                <TableCell>{formatDate(app.createdAt)}</TableCell>
               </TableRow>
             ))}
             {applications.length === 0 && (
               <TableRow>
                 <TableCell
-                  colSpan={6}
+                  colSpan={7}
                   className="text-center text-muted-foreground py-8"
                 >
                   No applications found

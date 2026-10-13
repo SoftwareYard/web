@@ -359,3 +359,14 @@ model JobApplication {
 
   @@map("job_applications")
 }
+
+// Emails we no longer accept job applications from
+model BlockedApplicant {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  fullName  String?  @map("full_name")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@map("blocked_applicants")
+}
