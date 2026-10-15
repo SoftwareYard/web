@@ -6,6 +6,7 @@ import { Facebook, Instagram, Linkedin, Mail, MapPin, Clock } from "lucide-react
 const footerLinks = {
   company: [
     { label: "About Us", href: "#about" },
+    { label: "Clients", href: "/clients" },
     { label: "Careers", href: "/careers" },
     { label: "Contact", href: "#contact" },
   ],

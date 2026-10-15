@@ -370,3 +370,34 @@ model BlockedApplicant {
 
   @@map("blocked_applicants")
 }
+
+// Public portfolio entries shown on /clients (separate from billing Client)
+model CaseStudy {
+  id                String   @id @default(cuid())
+  slug              String   @unique
+  name              String
+  industry          String
+  location          String
+  headline          String
+  summary           String
+  services          String[] @default([])
+  technologies      String[] @default([])
+  color             String
+  logoImage         String?  @map("logo_image")
+  coverImage        String?  @map("cover_image")
+  challengeImage    String?  @map("challenge_image")
+  outcomeImage      String?  @map("outcome_image")
+  stats             Json     @default("[]")
+  challenge         String
+  steps             Json     @default("[]")
+  outcome           String
+  testimonialQuote  String?  @map("testimonial_quote")
+  testimonialAuthor String?  @map("testimonial_author")
+  testimonialRole   String?  @map("testimonial_role")
+  sortOrder         Int      @default(0) @map("sort_order")
+  isActive          Boolean  @default(true) @map("is_active")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  @@map("case_studies")
+}

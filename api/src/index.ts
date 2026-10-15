@@ -27,6 +27,7 @@ import { notificationsRouter } from "./routes/notifications";
 import { birthdaysRouter } from "./routes/birthdays";
 import { chatBotRouter } from "./routes/chat-bot";
 import { scheduleCallRouter } from "./routes/schedule-call";
+import { caseStudiesRouter } from "./routes/case-studies";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
 import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
@@ -67,6 +68,7 @@ app.use("/api/notifications", notificationsRouter);
 app.use("/api/birthdays", birthdaysRouter);
 app.use("/api/chat-bot", chatBotRouter);
 app.use("/api/schedule-call", scheduleCallRouter);
+app.use("/api/case-studies", caseStudiesRouter);
 
 
 app.get("/health", (_req, res) => {
