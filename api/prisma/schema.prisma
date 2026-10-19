@@ -384,6 +384,7 @@ model CaseStudy {
   technologies      String[] @default([])
   color             String
   logoImage         String?  @map("logo_image")
+  logoOnDark        Boolean  @default(false) @map("logo_on_dark")
   coverImage        String?  @map("cover_image")
   challengeImage    String?  @map("challenge_image")
   outcomeImage      String?  @map("outcome_image")

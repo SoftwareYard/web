@@ -47,6 +47,7 @@ const caseStudySchema = z.object({
   summary: z.string().min(1, "Summary is required"),
   color: z.string().min(1, "Color is required"),
   logoImage: z.string().nullable(),
+  logoOnDark: z.boolean(),
   coverImage: z.string().nullable(),
   challengeImage: z.string().nullable(),
   outcomeImage: z.string().nullable(),
@@ -95,6 +96,7 @@ function toFormValues(caseStudy: CaseStudy): CaseStudyFormValues {
     summary: caseStudy.summary,
     color: caseStudy.color,
     logoImage: caseStudy.logoImage,
+    logoOnDark: caseStudy.logoOnDark,
     coverImage: caseStudy.coverImage,
     challengeImage: caseStudy.challengeImage,
     outcomeImage: caseStudy.outcomeImage,
@@ -110,6 +112,37 @@ function toFormValues(caseStudy: CaseStudy): CaseStudyFormValues {
     sortOrder: caseStudy.sortOrder,
     isActive: caseStudy.isActive,
   };
+}
+
+// Detects white/light logos so they can be shown on a dark background
+async function isLightImage(file: File): Promise<boolean> {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = canvas.height = 64;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return false;
+    ctx.drawImage(img, 0, 0, 64, 64);
+    const { data } = ctx.getImageData(0, 0, 64, 64);
+    let light = 0;
+    let count = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      if (data[i + 3] < 128) continue;
+      count++;
+      if (0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2] > 200) light++;
+    }
+    // Opaque logos (e.g. JPGs with a background) are fine on any background
+    if (count > (data.length / 4) * 0.9) return false;
+    // Nearly all visible pixels near-white; colourful artwork with pale areas is not
+    return count > 0 && light / count > 0.85;
+  } catch {
+    return false;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function slugify(text: string): string {
@@ -192,6 +225,7 @@ export function CaseStudyForm({
       summary: "",
       color: caseStudyColors[0].value,
       logoImage: null,
+      logoOnDark: false,
       coverImage: null,
       challengeImage: null,
       outcomeImage: null,
@@ -391,7 +425,28 @@ export function CaseStudyForm({
                       uploadPath={UPLOAD_PATH}
                       fit="contain"
                       className="w-32 h-32"
+                      darkBackground={form.watch("logoOnDark")}
+                      onFileSelected={async (file) =>
+                        form.setValue("logoOnDark", await isLightImage(file))
+                      }
                     />
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="logoOnDark"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 w-32">
+                      <FormControl>
+                        <Switch
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormLabel className="!mt-0 text-xs font-normal leading-tight">
+                        Light logo (dark background)
+                      </FormLabel>
+                    </FormItem>
                   )}
                 />
               </div>

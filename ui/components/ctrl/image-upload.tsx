@@ -15,6 +15,8 @@ interface ImageUploadProps {
   className?: string;
   // object-contain for logos so they aren't cropped
   fit?: "cover" | "contain";
+  darkBackground?: boolean;
+  onFileSelected?: (file: File) => void;
 }
 
 export function ImageUpload({
@@ -23,6 +25,8 @@ export function ImageUpload({
   uploadPath,
   className,
   fit = "cover",
+  darkBackground = false,
+  onFileSelected,
 }: ImageUploadProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -31,6 +35,7 @@ export function ImageUpload({
     const file = e.target.files?.[0];
     if (!file) return;
 
+    onFileSelected?.(file);
     setUploading(true);
     try {
       const formData = new FormData();
@@ -54,7 +59,8 @@ export function ImageUpload({
   return (
     <div
       className={cn(
-        "relative rounded-lg border border-dashed bg-muted/30 overflow-hidden",
+        "relative rounded-lg border border-dashed overflow-hidden",
+        darkBackground ? "bg-zinc-900" : "bg-muted/30",
         className
       )}
     >

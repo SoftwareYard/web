@@ -48,6 +48,16 @@ function isSlugTaken(err: unknown) {
   return (err as { code?: string })?.code === "P2002";
 }
 
+// Trim text so stray spaces from pasted content don't create duplicate
+// industry filters or blank entries on the website
+const text = (value: unknown) =>
+  (typeof value === "string" ? value.trim() : value) as string;
+const optionalText = (value: unknown) => (typeof value === "string" && value.trim()) || null;
+const textList = (value: unknown) =>
+  Array.isArray(value)
+    ? value.map((item) => String(item).trim()).filter(Boolean)
+    : [];
+
 function toData(body: Request["body"]) {
   const {
     slug,
@@ -60,6 +70,7 @@ function toData(body: Request["body"]) {
     technologies,
     color,
     logoImage,
+    logoOnDark,
     coverImage,
     challengeImage,
     outcomeImage,
@@ -74,26 +85,39 @@ function toData(body: Request["body"]) {
     isActive,
   } = body;
   return {
-    slug,
-    name,
-    industry,
-    location,
-    headline,
-    summary,
-    services: services || [],
-    technologies: technologies || [],
+    slug: text(slug),
+    name: text(name),
+    industry: text(industry),
+    location: text(location),
+    headline: text(headline),
+    summary: text(summary),
+    services: textList(services),
+    technologies: textList(technologies),
     color,
     logoImage: logoImage || null,
+    logoOnDark: !!logoOnDark,
     coverImage: coverImage || null,
     challengeImage: challengeImage || null,
     outcomeImage: outcomeImage || null,
-    stats: stats || [],
-    challenge,
-    steps: steps || [],
-    outcome,
-    testimonialQuote: testimonialQuote || null,
-    testimonialAuthor: testimonialAuthor || null,
-    testimonialRole: testimonialRole || null,
+    stats: Array.isArray(stats)
+      ? stats
+          .map((stat) => ({ value: text(stat?.value), label: text(stat?.label) }))
+          .filter((stat) => stat.value)
+      : [],
+    challenge: text(challenge),
+    steps: Array.isArray(steps)
+      ? steps
+          .map((step) => ({
+            title: text(step?.title),
+            description: text(step?.description),
+            image: step?.image || null,
+          }))
+          .filter((step) => step.title)
+      : [],
+    outcome: text(outcome),
+    testimonialQuote: optionalText(testimonialQuote),
+    testimonialAuthor: optionalText(testimonialAuthor),
+    testimonialRole: optionalText(testimonialRole),
     sortOrder: sortOrder ?? 0,
     isActive: isActive ?? true,
   };

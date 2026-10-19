@@ -7,6 +7,7 @@ import { ArrowUpRight } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
 import { cn } from "@/lib/utils"
 import type { CaseStudy } from "@/lib/clients"
+import { ClientLogo } from "@/components/clients/client-logo"
 
 interface ClientCardProps {
   client: CaseStudy
@@ -44,14 +45,12 @@ export function ClientCard({ client, index }: ClientCardProps) {
                 className="object-cover"
               />
             ) : client.logoImage ? (
-              <div className="relative w-1/2 h-1/3">
-                <Image
-                  src={client.logoImage}
-                  alt={client.name}
-                  fill
-                  className="object-contain"
-                />
-              </div>
+              <ClientLogo
+                src={client.logoImage}
+                alt={client.name}
+                onDark={client.logoOnDark}
+                className={client.logoOnDark ? "w-1/2 h-1/2" : "w-1/2 h-1/3"}
+              />
             ) : (
               <span className="text-3xl md:text-4xl font-bold text-foreground/60">
                 {client.name}
@@ -65,14 +64,12 @@ export function ClientCard({ client, index }: ClientCardProps) {
           <div className="flex items-center justify-between mb-3 text-sm text-muted-foreground">
             <span className="flex items-center gap-2">
               {client.logoImage && (
-                <span className="relative w-6 h-6">
-                  <Image
-                    src={client.logoImage}
-                    alt=""
-                    fill
-                    className="object-contain"
-                  />
-                </span>
+                <ClientLogo
+                  src={client.logoImage}
+                  alt=""
+                  onDark={client.logoOnDark}
+                  className="w-6 h-6 rounded-md"
+                />
               )}
               {client.name}
             </span>

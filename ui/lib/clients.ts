@@ -21,6 +21,7 @@ export interface CaseStudy {
   technologies: string[]
   color: string
   logoImage: string | null
+  logoOnDark: boolean
   coverImage: string | null
   challengeImage: string | null
   outcomeImage: string | null

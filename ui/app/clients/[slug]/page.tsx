@@ -8,6 +8,7 @@ import { Footer } from "@/components/footer"
 import { Button } from "@/components/ui/button"
 import { getClientBySlug, getClientSlugs, getClients } from "@/lib/clients"
 import { cn } from "@/lib/utils"
+import { ClientLogo } from "@/components/clients/client-logo"
 
 interface ClientPageProps {
   params: Promise<{ slug: string }>
@@ -36,6 +37,19 @@ export async function generateMetadata({
   }
 }
 
+// The page adds its own quote marks, so drop any typed into the testimonial
+function stripQuotes(text: string) {
+  return text.trim().replace(/^["'“”„«»‘’]+|["'“”„«»‘’]+$/g, "").trim()
+}
+
+// Stats row keeps every item on one line on desktop, whatever the count
+const statColumns: Record<number, string> = {
+  1: "",
+  2: "sm:grid-cols-2",
+  3: "sm:grid-cols-3",
+  4: "sm:grid-cols-2 lg:grid-cols-4",
+}
+
 function SectionImage({ src, alt }: { src: string; alt: string }) {
   return (
     <div className="relative aspect-[16/9] mt-6 rounded-2xl overflow-hidden border border-border bg-secondary/30">
@@ -55,6 +69,12 @@ export default async function ClientPage({ params }: ClientPageProps) {
   const clients = await getClients()
   const currentIndex = clients.findIndex((c) => c.slug === client.slug)
   const nextClient = currentIndex >= 0 ? clients[(currentIndex + 1) % clients.length] : undefined
+  const hasSidebar = client.services.length > 0 || client.technologies.length > 0
+  const testimonialRole = client.testimonialRole ?? ""
+  // Skip the client name when the role already names it ("Founder, ... (Capsa customer)")
+  const testimonialCompany = testimonialRole.toLowerCase().includes(client.name.toLowerCase())
+    ? ""
+    : client.name
 
   return (
     <main className="min-h-screen bg-background">
@@ -80,14 +100,13 @@ export default async function ClientPage({ params }: ClientPageProps) {
           >
             <div>
               {client.logoImage ? (
-                <div className="relative h-12 w-40 mb-6">
-                  <Image
-                    src={client.logoImage}
-                    alt={client.name}
-                    fill
-                    className="object-contain object-left"
-                  />
-                </div>
+                <ClientLogo
+                  src={client.logoImage}
+                  alt={client.name}
+                  onDark={client.logoOnDark}
+                  align="left"
+                  className="h-14 w-44 mb-6"
+                />
               ) : (
                 <span className="inline-block px-3 py-1 text-xs font-medium bg-accent/10 text-accent rounded-full mb-4">
                   {client.name}
@@ -129,9 +148,14 @@ export default async function ClientPage({ params }: ClientPageProps) {
       {client.stats.length > 0 && (
         <section className="border-b border-border">
           <div className="container mx-auto px-6">
-            <div className="grid sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-border">
-              {client.stats.map((stat) => (
-                <div key={stat.label} className="py-8 sm:px-8 first:sm:pl-0">
+            <div
+              className={cn(
+                "grid gap-x-8 gap-y-6 py-10",
+                statColumns[client.stats.length] ?? "sm:grid-cols-2 lg:grid-cols-3"
+              )}
+            >
+              {client.stats.map((stat, index) => (
+                <div key={index} className="border-l-2 border-accent pl-5">
                   <div className="text-3xl font-bold mb-1">{stat.value}</div>
                   <div className="text-sm text-muted-foreground">{stat.label}</div>
                 </div>
@@ -146,7 +170,7 @@ export default async function ClientPage({ params }: ClientPageProps) {
         <div className="container mx-auto px-6">
           <div className="grid lg:grid-cols-3 gap-12">
             {/* Main Content */}
-            <div className="lg:col-span-2 space-y-16">
+            <div className={cn("space-y-16", hasSidebar ? "lg:col-span-2" : "lg:col-span-3 max-w-3xl")}>
               {/* Challenge */}
               <div>
                 <h2 className="text-2xl font-semibold mb-4">The Challenge</h2>
@@ -191,37 +215,43 @@ export default async function ClientPage({ params }: ClientPageProps) {
             </div>
 
             {/* Sidebar */}
-            <div className="lg:col-span-1">
-              <div className="sticky top-32 space-y-6">
-                <div className="p-6 rounded-3xl border border-border bg-card">
-                  <h3 className="font-semibold mb-4">Services</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {client.services.map((service) => (
-                      <span
-                        key={service}
-                        className="px-3 py-1 text-xs font-medium bg-accent/10 text-accent rounded-full"
-                      >
-                        {service}
-                      </span>
-                    ))}
-                  </div>
-                </div>
+            {hasSidebar && (
+              <div className="lg:col-span-1">
+                <div className="sticky top-32 space-y-6">
+                  {client.services.length > 0 && (
+                    <div className="p-6 rounded-3xl border border-border bg-card">
+                      <h3 className="font-semibold mb-4">Services</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {client.services.map((service) => (
+                          <span
+                            key={service}
+                            className="px-3 py-1 text-xs font-medium bg-accent/10 text-accent rounded-full"
+                          >
+                            {service}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
-                <div className="p-6 rounded-3xl border border-border bg-card">
-                  <h3 className="font-semibold mb-4">Technologies</h3>
-                  <div className="flex flex-wrap gap-2">
-                    {client.technologies.map((tech) => (
-                      <span
-                        key={tech}
-                        className="px-3 py-1 text-xs font-medium bg-secondary rounded-full"
-                      >
-                        {tech}
-                      </span>
-                    ))}
-                  </div>
+                  {client.technologies.length > 0 && (
+                    <div className="p-6 rounded-3xl border border-border bg-card">
+                      <h3 className="font-semibold mb-4">Technologies</h3>
+                      <div className="flex flex-wrap gap-2">
+                        {client.technologies.map((tech) => (
+                          <span
+                            key={tech}
+                            className="px-3 py-1 text-xs font-medium bg-secondary rounded-full"
+                          >
+                            {tech}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
-            </div>
+            )}
           </div>
         </div>
       </section>
@@ -233,14 +263,13 @@ export default async function ClientPage({ params }: ClientPageProps) {
             <div className="max-w-3xl mx-auto text-center">
               <Quote className="w-12 h-12 mx-auto mb-8 text-background/20" />
               <blockquote className="text-xl md:text-2xl font-medium leading-relaxed mb-8 text-pretty">
-                &ldquo;{client.testimonialQuote}&rdquo;
+                &ldquo;{stripQuotes(client.testimonialQuote)}&rdquo;
               </blockquote>
               {client.testimonialAuthor && (
                 <div className="font-semibold">{client.testimonialAuthor}</div>
               )}
               <div className="text-background/60 text-sm">
-                {client.testimonialRole ? `${client.testimonialRole}, ` : ""}
-                {client.name}
+                {[testimonialRole, testimonialCompany].filter(Boolean).join(", ")}
               </div>
             </div>
           </div>
