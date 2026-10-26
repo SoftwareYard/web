@@ -71,6 +71,7 @@ interface TeamMember {
   address: string | null;
   city: string | null;
   embg: string | null;
+  dateOfBirth: string | null;
   clientId: string | null;
   hireDate: string | null;
   currentSalaryEur: number | null;
@@ -102,6 +103,7 @@ const teamSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   embg: z.string().optional(),
+  dateOfBirth: z.string().optional(),
   clientId: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
@@ -253,6 +255,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       address: "",
       city: "",
       embg: "",
+      dateOfBirth: "",
       clientId: "",
       hireDate: "",
       currentSalaryEur: "",
@@ -284,6 +287,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       address: m.address ?? "",
       city: m.city ?? "",
       embg: m.embg ?? "",
+      dateOfBirth: toDateInputValue(m.dateOfBirth),
       clientId: m.clientId ?? "",
       hireDate: toDateInputValue(m.hireDate),
       currentSalaryEur: m.currentSalaryEur != null ? String(m.currentSalaryEur) : "",
@@ -309,6 +313,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     fd.append("address", values.address || "");
     fd.append("city", values.city || "");
     fd.append("embg", values.embg || "");
+    fd.append("dateOfBirth", values.dateOfBirth || "");
     fd.append("clientId", values.clientId || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
@@ -591,7 +596,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                 )}
               </div>
 
-              <div className="grid sm:grid-cols-2 gap-4">
+              <div className="grid sm:grid-cols-3 gap-4">
                 <FormField
                   control={form.control}
                   name="email"
@@ -613,6 +618,18 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                       <FormLabel>Phone</FormLabel>
                       <FormControl>
                         <Input type="tel" {...field} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="dateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Date of Birth</FormLabel>
+                      <FormControl>
+                        <Input type="date" {...field} />
                       </FormControl>
                     </FormItem>
                   )}

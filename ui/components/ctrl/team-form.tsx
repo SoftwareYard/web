@@ -55,6 +55,7 @@ const teamSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   embg: z.string().optional(),
+  dateOfBirth: z.string().optional(),
   clientId: z.string().optional(),
   hireDate: z.string().optional(),
   currentSalaryEur: z.string().optional(),
@@ -107,6 +108,7 @@ export function TeamForm({
     address: "",
     city: "",
     embg: "",
+    dateOfBirth: "",
     clientId: "",
     hireDate: "",
     currentSalaryEur: "",
@@ -126,6 +128,7 @@ export function TeamForm({
     defaults.address = (defaultValues.address as string) || "";
     defaults.city = (defaultValues.city as string) || "";
     defaults.embg = (defaultValues.embg as string) || "";
+    defaults.dateOfBirth = toDateInputValue(defaultValues.dateOfBirth);
     defaults.clientId = (defaultValues.clientId as string) || "";
     defaults.hireDate = toDateInputValue(defaultValues.hireDate);
     defaults.currentSalaryEur = defaultValues.currentSalaryEur
@@ -157,6 +160,7 @@ export function TeamForm({
     fd.append("address", values.address || "");
     fd.append("city", values.city || "");
     fd.append("embg", values.embg || "");
+    fd.append("dateOfBirth", values.dateOfBirth || "");
     fd.append("clientId", values.clientId || "");
     fd.append("hireDate", values.hireDate || "");
     fd.append("currentSalaryEur", values.currentSalaryEur || "");
@@ -357,6 +361,20 @@ export function TeamForm({
                       />
                     </FormControl>
                     <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="dateOfBirth"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Date of Birth</FormLabel>
+                    <FormControl>
+                      <Input type="date" {...field} />
+                    </FormControl>
                   </FormItem>
                 )}
               />

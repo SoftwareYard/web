@@ -26,7 +26,6 @@ function sanitizeMember<
     invoiceValue?: number | null;
     managementFee?: number | null;
     password?: string | null;
-    dateOfBirth?: Date | null;
     secondContactName?: string | null;
     secondContactPhone?: string | null;
   }
@@ -35,7 +34,6 @@ function sanitizeMember<
     invoiceValue,
     managementFee,
     password,
-    dateOfBirth,
     secondContactName,
     secondContactPhone,
     ...rest
@@ -106,7 +104,7 @@ teamRouter.post(
   requireAuth,
   upload.single("image"),
   async (req: Request, res: Response) => {
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, clientId } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, dateOfBirth, clientId } =
       req.body;
 
     if (email) {
@@ -149,6 +147,7 @@ teamRouter.post(
         address: address || null,
         city: city || null,
         embg: embg || null,
+        dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         clientId: clientId || null,
       },
     });
@@ -163,7 +162,7 @@ teamRouter.put(
   upload.single("image"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, clientId } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, dateOfBirth, clientId } =
       req.body;
 
     if (email) {
@@ -199,6 +198,7 @@ teamRouter.put(
       address: address || null,
       city: city || null,
       embg: embg || null,
+      dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       clientId: clientId || null,
     };
 

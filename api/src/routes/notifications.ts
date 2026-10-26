@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import { requireAuth, requireSuperAdmin } from "../middleware/auth";
 import { checkOverdueInvoices } from "../services/overdue-invoices.service";
 import { checkOverdueContracts } from "../services/overdue-contracts.service";
-import { checkTodaysBirthdays } from "../services/birthday-notice.service";
+import { checkTodaysBirthdays, sendBirthdayHeadsUpFor } from "../services/birthday-notice.service";
 import { runDatabaseBackup, getLatestBackup } from "../services/db-backup.service";
 
 export const notificationsRouter = Router();
@@ -48,6 +48,25 @@ notificationsRouter.post(
     } catch (err) {
       console.error("[notifications] Manual birthdays trigger failed:", err);
       res.status(500).json({ error: "Failed to send Slack notification" });
+    }
+  }
+);
+
+// PROTECTED: Manually DM everyone (except the birthday person) a heads-up about their next birthday
+notificationsRouter.post(
+  "/birthdays/:id/heads-up",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    try {
+      const sentCount = await sendBirthdayHeadsUpFor(req.params.id as string);
+      if (sentCount === null) {
+        res.status(404).json({ error: "Team member not found or has no date of birth" });
+        return;
+      }
+      res.json({ sentCount });
+    } catch (err) {
+      console.error("[notifications] Manual birthday heads-up failed:", err);
+      res.status(500).json({ error: "Failed to send Slack DMs" });
     }
   }
 );

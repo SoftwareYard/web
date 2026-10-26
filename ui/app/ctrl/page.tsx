@@ -9,7 +9,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2, Cake, DatabaseBackup } from "lucide-react";
+import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2, Cake, DatabaseBackup, BellRing } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { cmsApi } from "@/lib/cms-api";
@@ -48,6 +48,7 @@ export default function CtrlDashboard() {
   const [sendingContracts, setSendingContracts] = useState(false);
   const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
   const [sendingBirthdays, setSendingBirthdays] = useState(false);
+  const [sendingHeadsUpId, setSendingHeadsUpId] = useState<string | null>(null);
   const [runningBackup, setRunningBackup] = useState(false);
   const [latestBackup, setLatestBackup] = useState<LatestBackup | null>(null);
   const [latestBackupError, setLatestBackupError] = useState(false);
@@ -115,6 +116,25 @@ export default function CtrlDashboard() {
       toast.error("Failed to send Slack notification");
     } finally {
       setSendingBirthdays(false);
+    }
+  };
+
+  const handleSendHeadsUp = async (b: UpcomingBirthday) => {
+    setSendingHeadsUpId(b.id);
+    try {
+      const { sentCount } = await cmsApi<{ sentCount: number }>(
+        `/api/notifications/birthdays/${b.id}/heads-up`,
+        { method: "POST" }
+      );
+      toast.success(
+        sentCount === 0
+          ? "No DMs sent — check the Slack bot token and allowlist"
+          : `Heads-up for ${b.name} sent to ${sentCount} team member${sentCount !== 1 ? "s" : ""}`
+      );
+    } catch {
+      toast.error("Failed to send Slack DMs");
+    } finally {
+      setSendingHeadsUpId(null);
     }
   };
 
@@ -247,9 +267,9 @@ export default function CtrlDashboard() {
             {birthdays.length > 0 && (
               <ul className="space-y-1 text-sm mb-3">
                 {birthdays.map((b) => (
-                  <li key={b.id} className="flex justify-between text-muted-foreground">
+                  <li key={b.id} className="flex items-center justify-between gap-2 text-muted-foreground">
                     <span>{b.name}</span>
-                    <span>
+                    <span className="flex items-center gap-1">
                       {b.daysUntil === 0
                         ? "Today"
                         : new Date(b.date).toLocaleDateString("en-GB", {
@@ -257,6 +277,22 @@ export default function CtrlDashboard() {
                             day: "2-digit",
                             month: "short",
                           })}
+                      {b.daysUntil > 0 && (
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="h-7 w-7"
+                          title="DM everyone else a heads-up"
+                          onClick={() => handleSendHeadsUp(b)}
+                          disabled={sendingHeadsUpId !== null}
+                        >
+                          {sendingHeadsUpId === b.id ? (
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          ) : (
+                            <BellRing className="w-4 h-4" />
+                          )}
+                        </Button>
+                      )}
                     </span>
                   </li>
                 ))}

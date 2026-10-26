@@ -122,18 +122,45 @@ export async function sendBirthdayHeadsUps(): Promise<number> {
 
   let sentCount = 0;
   for (const birthdayMember of birthdayMembers) {
-    for (const recipient of members) {
-      if (recipient.id === birthdayMember.id || !recipient.email) continue;
-      try {
-        const sent = await sendSlackDM(recipient.email, buildHeadsUpMessage(birthdayMember.name, birthday));
-        if (sent) sentCount++;
-      } catch (err) {
-        console.error(`[birthday-notice] Failed to DM ${recipient.email}:`, err);
-      }
-    }
+    sentCount += await dmHeadsUp(birthdayMember, birthday, members);
   }
 
   console.log(`[birthday-notice] Sent ${sentCount} birthday heads-up DM(s).`);
+  return sentCount;
+}
+
+async function dmHeadsUp(
+  birthdayMember: { id: string; name: string },
+  birthday: Date,
+  recipients: { id: string; email: string | null }[]
+): Promise<number> {
+  let sentCount = 0;
+  for (const recipient of recipients) {
+    if (recipient.id === birthdayMember.id || !recipient.email) continue;
+    try {
+      const sent = await sendSlackDM(recipient.email, buildHeadsUpMessage(birthdayMember.name, birthday));
+      if (sent) sentCount++;
+    } catch (err) {
+      console.error(`[birthday-notice] Failed to DM ${recipient.email}:`, err);
+    }
+  }
+  return sentCount;
+}
+
+// Manually sends the heads-up DMs for one member's next birthday, whenever it is.
+// Returns null if the member is not found, inactive or has no date of birth.
+export async function sendBirthdayHeadsUpFor(memberId: string): Promise<number | null> {
+  const members = await prisma.teamMember.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, email: true, dateOfBirth: true },
+  });
+
+  const birthdayMember = members.find((m) => m.id === memberId);
+  if (!birthdayMember?.dateOfBirth) return null;
+
+  const { date } = nextOccurrence(birthdayMember.dateOfBirth, new Date());
+  const sentCount = await dmHeadsUp(birthdayMember, date, members);
+  console.log(`[birthday-notice] Manually sent ${sentCount} heads-up DM(s) for ${birthdayMember.name}.`);
   return sentCount;
 }
 
