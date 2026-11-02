@@ -1,4 +1,5 @@
 export const WEBSITE_SENDER = "SoftwareYard Website <website@softwareyard.co>";
+export const CAREERS_SENDER = "SoftwareYard Careers <careers@softwareyard.co>";
 
 export function escapeHtml(value: unknown): string {
   return String(value ?? "")

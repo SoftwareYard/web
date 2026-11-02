@@ -4,7 +4,7 @@ import multer from "multer";
 import { uploadToBunny } from "../lib/bunny";
 import { mapJobTitleToRole } from "../lib/role-mapper";
 import { prisma } from "../lib/prisma";
-import { WEBSITE_SENDER, escapeHtml, escapeMultiline } from "../lib/email";
+import { WEBSITE_SENDER, CAREERS_SENDER, escapeHtml, escapeMultiline } from "../lib/email";
 import { grossToNetMK, netToGrossMK } from "../services/salary.calculator.service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -148,6 +148,34 @@ applyRouter.post(
       console.error("Resend error:", error);
       res.status(500).json({ error: "Failed to send application" });
       return;
+    }
+
+    // Confirmation to the applicant — a failure here must not fail the application
+    const firstName = String(fullName).trim().split(/\s+/)[0];
+    const { error: confirmationError } = await resend.emails.send({
+      from: CAREERS_SENDER,
+      to: email,
+      replyTo: "careers@softwareyard.co",
+      subject: `Thank you for applying for ${position}`,
+      html: `
+        <p>Hi ${escapeHtml(firstName)},</p>
+        <p>Thank you for applying for the <strong>${escapeHtml(position)}</strong> position at SoftwareYard.</p>
+        <p>We have received your application and our team will review it carefully. If your profile is a good fit for the role, we will get back to you with the next steps.</p>
+        <p>Best regards,<br />SoftwareYard Team</p>
+      `,
+      text: [
+        `Hi ${firstName},`,
+        "",
+        `Thank you for applying for the ${position} position at SoftwareYard.`,
+        "",
+        "We have received your application and our team will review it carefully. If your profile is a good fit for the role, we will get back to you with the next steps.",
+        "",
+        "Best regards,",
+        "SoftwareYard Team",
+      ].join("\n"),
+    });
+    if (confirmationError) {
+      console.error("Resend confirmation email error:", confirmationError);
     }
 
     try {

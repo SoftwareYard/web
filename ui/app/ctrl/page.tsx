@@ -9,7 +9,7 @@ import {
   CardContent,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2, Cake, DatabaseBackup, BellRing } from "lucide-react";
+import { Users, Briefcase, AlertCircle, FileWarning, Send, Loader2, Cake, DatabaseBackup, BellRing, Award } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 import { cmsApi } from "@/lib/cms-api";
@@ -49,6 +49,7 @@ export default function CtrlDashboard() {
   const [birthdays, setBirthdays] = useState<UpcomingBirthday[]>([]);
   const [sendingBirthdays, setSendingBirthdays] = useState(false);
   const [sendingHeadsUpId, setSendingHeadsUpId] = useState<string | null>(null);
+  const [sendingAnniversaries, setSendingAnniversaries] = useState(false);
   const [runningBackup, setRunningBackup] = useState(false);
   const [latestBackup, setLatestBackup] = useState<LatestBackup | null>(null);
   const [latestBackupError, setLatestBackupError] = useState(false);
@@ -135,6 +136,25 @@ export default function CtrlDashboard() {
       toast.error("Failed to send Slack DMs");
     } finally {
       setSendingHeadsUpId(null);
+    }
+  };
+
+  const handleSendAnniversaries = async () => {
+    setSendingAnniversaries(true);
+    try {
+      const { sentCount } = await cmsApi<{ sentCount: number }>(
+        "/api/notifications/work-anniversaries",
+        { method: "POST" }
+      );
+      toast.success(
+        sentCount === 0
+          ? "No work anniversaries today — nothing sent"
+          : `Sent to Slack: ${sentCount} work anniversar${sentCount !== 1 ? "ies" : "y"}`
+      );
+    } catch {
+      toast.error("Failed to send Slack notification");
+    } finally {
+      setSendingAnniversaries(false);
     }
   };
 
@@ -300,6 +320,24 @@ export default function CtrlDashboard() {
             )}
             <Button size="sm" variant="outline" onClick={handleSendBirthdays} disabled={sendingBirthdays}>
               {sendingBirthdays ? (
+                <Loader2 className="w-4 h-4 mr-1 animate-spin" />
+              ) : (
+                <Send className="w-4 h-4 mr-1" />
+              )}
+              Send to Slack
+            </Button>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Award className="w-5 h-5" /> Work Anniversaries
+            </CardTitle>
+            <CardDescription>Posted daily at 11:00 to the general channel</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button size="sm" variant="outline" onClick={handleSendAnniversaries} disabled={sendingAnniversaries}>
+              {sendingAnniversaries ? (
                 <Loader2 className="w-4 h-4 mr-1 animate-spin" />
               ) : (
                 <Send className="w-4 h-4 mr-1" />

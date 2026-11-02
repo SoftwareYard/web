@@ -34,6 +34,7 @@ import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
 import { startOverdueContractsCron } from "./services/overdue-contracts.service";
 import { startHolidayNoticeCron } from "./services/holiday-notice.service";
 import { startBirthdayNoticeCron } from "./services/birthday-notice.service";
+import { startWorkAnniversaryNoticeCron } from "./services/work-anniversary-notice.service";
 import { startDatabaseBackupCron } from "./services/db-backup.service";
 
 const app = express();
@@ -83,6 +84,7 @@ app.listen(port, () => {
   startOverdueContractsCron();
   startHolidayNoticeCron();
   startBirthdayNoticeCron();
+  startWorkAnniversaryNoticeCron();
   startDatabaseBackupCron();
 });
 

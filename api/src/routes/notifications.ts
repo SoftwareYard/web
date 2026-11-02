@@ -3,6 +3,7 @@ import { requireAuth, requireSuperAdmin } from "../middleware/auth";
 import { checkOverdueInvoices } from "../services/overdue-invoices.service";
 import { checkOverdueContracts } from "../services/overdue-contracts.service";
 import { checkTodaysBirthdays, sendBirthdayHeadsUpFor } from "../services/birthday-notice.service";
+import { checkTodaysWorkAnniversaries } from "../services/work-anniversary-notice.service";
 import { runDatabaseBackup, getLatestBackup } from "../services/db-backup.service";
 
 export const notificationsRouter = Router();
@@ -47,6 +48,21 @@ notificationsRouter.post(
       res.json({ sentCount });
     } catch (err) {
       console.error("[notifications] Manual birthdays trigger failed:", err);
+      res.status(500).json({ error: "Failed to send Slack notification" });
+    }
+  }
+);
+
+// PROTECTED: Manually trigger today's work anniversary Slack check (general channel)
+notificationsRouter.post(
+  "/work-anniversaries",
+  requireAuth,
+  async (_req: Request, res: Response) => {
+    try {
+      const sentCount = await checkTodaysWorkAnniversaries();
+      res.json({ sentCount });
+    } catch (err) {
+      console.error("[notifications] Manual work-anniversaries trigger failed:", err);
       res.status(500).json({ error: "Failed to send Slack notification" });
     }
   }
