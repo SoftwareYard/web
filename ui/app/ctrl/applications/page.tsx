@@ -40,6 +40,7 @@ interface JobApplication {
   roleId: string | null;
   role: CandidateRole | null;
   hrInterviewTime: string | null;
+  applicationCount: number;
   createdAt: string;
 }
 
@@ -195,7 +196,18 @@ export default function ApplicationsPage() {
           <TableBody>
             {applications.map((app) => (
               <TableRow key={app.id} className="cursor-pointer hover:bg-muted/50" onClick={() => router.push(`/ctrl/applications/${app.id}`)}>
-                <TableCell className="font-medium">{app.fullName}</TableCell>
+                <TableCell className="font-medium">
+                  {app.fullName}
+                  {app.applicationCount > 1 && (
+                    <Badge
+                      variant="outline"
+                      className="ml-2 border-amber-500/60 text-amber-700 dark:text-amber-400"
+                      title={`${app.email} has applied ${app.applicationCount} times`}
+                    >
+                      Applied {app.applicationCount}×
+                    </Badge>
+                  )}
+                </TableCell>
                 <TableCell>{app.email}</TableCell>
                 <TableCell>
                   {app.role ? (

@@ -54,6 +54,7 @@ interface JobApplication {
   techNotes: string | null;
   createdAt: string;
   blocked: BlockedApplicant | null;
+  otherApplications: { id: string; jobTitle: string; createdAt: string }[];
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
@@ -197,6 +198,28 @@ export default function ApplicationDetailPage({ params }: { params: Promise<{ id
             )}
           </div>
         </div>
+        {app.otherApplications.length > 0 && (
+          <div className="mt-4 rounded-lg border border-amber-500/50 bg-amber-500/5 p-3 text-sm">
+            <span className="font-medium text-amber-700 dark:text-amber-400">
+              Applied {app.otherApplications.length + 1} times
+            </span>{" "}
+            with {app.email}. Other applications:
+            <ul className="mt-1 space-y-0.5">
+              {app.otherApplications.map((other) => (
+                <li key={other.id}>
+                  <button
+                    type="button"
+                    className="underline hover:text-foreground"
+                    onClick={() => router.push(`/ctrl/applications/${other.id}`)}
+                  >
+                    {other.jobTitle}
+                  </button>
+                  <span className="text-muted-foreground"> · {formatDate(other.createdAt)}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         {app.blocked && (
           <div className="mt-4 rounded-lg border border-destructive/50 bg-destructive/5 p-3 text-sm">
             <span className="font-medium text-destructive">Blocked</span> since {formatDate(app.blocked.createdAt)} —

@@ -4,6 +4,8 @@ import { requireAuth } from "../middleware/auth";
 
 export const applicationsRouter = Router();
 
+const normalizeEmail = (email: string) => email.trim().toLowerCase();
+
 // PROTECTED: Get all applications with pagination, search, and role filter
 applicationsRouter.get(
   "/",
@@ -46,8 +48,23 @@ applicationsRouter.get(
       prisma.jobApplication.count({ where }),
     ]);
 
+    // How many times each applicant on this page has applied, matched by email
+    const emails = [...new Set(applications.map((a) => normalizeEmail(a.email)))];
+    const counts = emails.length
+      ? await prisma.$queryRaw<{ email: string; count: number }[]>`
+          SELECT lower(trim(email)) AS email, count(*)::int AS count
+          FROM job_applications
+          WHERE lower(trim(email)) = ANY(${emails})
+          GROUP BY lower(trim(email))
+        `
+      : [];
+    const countByEmail = new Map(counts.map((c) => [c.email, c.count]));
+
     res.json({
-      data: applications,
+      data: applications.map((a) => ({
+        ...a,
+        applicationCount: countByEmail.get(normalizeEmail(a.email)) ?? 1,
+      })),
       total,
       page,
       limit,
@@ -112,7 +129,17 @@ applicationsRouter.get(
       where: { email: application.email.trim().toLowerCase() },
     });
 
-    res.json({ ...application, blocked });
+    // Other applications from the same email, newest first
+    const otherApplications = await prisma.$queryRaw<
+      { id: string; jobTitle: string; createdAt: Date }[]
+    >`
+      SELECT id, job_title AS "jobTitle", created_at AS "createdAt"
+      FROM job_applications
+      WHERE lower(trim(email)) = ${normalizeEmail(application.email)} AND id <> ${application.id}
+      ORDER BY created_at DESC
+    `;
+
+    res.json({ ...application, blocked, otherApplications });
   }
 );
 
