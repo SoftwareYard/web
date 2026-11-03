@@ -50,6 +50,13 @@ applyRouter.post(
       return;
     }
 
+    // Checked before any email goes out, so a bad value can't leave an emailed but unsaved application
+    const salaryText = String(expectedSalary).trim();
+    if (!/^\d+$/.test(salaryText) || parseInt(salaryText, 10) <= 0) {
+      res.status(400).json({ error: "Expected salary must be a number greater than 0" });
+      return;
+    }
+
     if (!req.file) {
       res.status(400).json({ error: "CV file is required" });
       return;
@@ -181,7 +188,7 @@ applyRouter.post(
     try {
       if (!roleId) throw new Error(`No role for job title "${jobTitle}"`);
 
-      const netEur = parseInt(expectedSalary, 10);
+      const netEur = parseInt(salaryText, 10);
 
       const rate = await getEurToMkdRate();
       const netMkd = Math.round(netEur * rate);

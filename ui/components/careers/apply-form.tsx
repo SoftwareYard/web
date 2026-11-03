@@ -36,6 +36,8 @@ function validate(formData: FormData, file: File | null): FieldErrors {
     errors.expectedSalary = "Expected net salary is required"
   } else if (!/^\d+$/.test(expectedSalary)) {
     errors.expectedSalary = "Please enter a valid number"
+  } else if (parseInt(expectedSalary, 10) <= 0) {
+    errors.expectedSalary = "Expected salary must be greater than 0"
   }
 
   if (!file) errors.cv = "Please upload your CV"
@@ -211,7 +213,7 @@ export function ApplyForm({ jobTitle, jobSlug }: ApplyFormProps) {
             id="expectedSalary"
             name="expectedSalary"
             type="number"
-            min="0"
+            min="1"
             placeholder=""
             className={`rounded-xl h-12 [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none [-moz-appearance:textfield] ${fieldErrors.expectedSalary ? "border-destructive" : ""}`}
             onChange={() => clearFieldError("expectedSalary")}
