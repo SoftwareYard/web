@@ -28,6 +28,8 @@ import { birthdaysRouter } from "./routes/birthdays";
 import { chatBotRouter } from "./routes/chat-bot";
 import { scheduleCallRouter } from "./routes/schedule-call";
 import { caseStudiesRouter } from "./routes/case-studies";
+import { screeningsRouter } from "./routes/screenings";
+import { markInterruptedScreenings } from "./services/cv-screening.service";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
 import { startOverdueInvoicesCron } from "./services/overdue-invoices.service";
@@ -70,6 +72,7 @@ app.use("/api/birthdays", birthdaysRouter);
 app.use("/api/chat-bot", chatBotRouter);
 app.use("/api/schedule-call", scheduleCallRouter);
 app.use("/api/case-studies", caseStudiesRouter);
+app.use("/api/screenings", screeningsRouter);
 
 
 app.get("/health", (_req, res) => {
@@ -86,6 +89,9 @@ app.listen(port, () => {
   startBirthdayNoticeCron();
   startWorkAnniversaryNoticeCron();
   startDatabaseBackupCron();
+  markInterruptedScreenings().catch((err) =>
+    console.error("Failed to mark interrupted CV screenings:", err)
+  );
 });
 
 

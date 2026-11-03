@@ -224,6 +224,7 @@ model CandidateRole {
   name String @unique
 
   jobApplications JobApplication[]
+  cvScreenings    CvScreening[]
 
   @@map("candidate_roles")
 }
@@ -357,6 +358,8 @@ model JobApplication {
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")
 
+  screeningResults CvScreeningResult[]
+
   @@map("job_applications")
 }
 
@@ -401,4 +404,42 @@ model CaseStudy {
   updatedAt         DateTime @updatedAt @map("updated_at")
 
   @@map("case_studies")
+}
+
+// An AI pass over CVs against free-text criteria written by HR
+model CvScreening {
+  id          String         @id @default(cuid())
+  criteria    String
+  roleId      String?        @map("role_id")
+  role        CandidateRole? @relation(fields: [roleId], references: [id])
+  appliedFrom DateTime?      @map("applied_from")
+  // running | done | interrupted
+  status      String         @default("running")
+  total       Int            @default(0)
+  processed   Int            @default(0)
+  createdById String?        @map("created_by_id")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  finishedAt  DateTime?      @map("finished_at")
+
+  results CvScreeningResult[]
+
+  @@map("cv_screenings")
+}
+
+model CvScreeningResult {
+  id               String         @id @default(cuid())
+  screeningId      String         @map("screening_id")
+  screening        CvScreening    @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+  applicationId    String         @map("application_id")
+  application      JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  // match | no_match | unclear | error
+  verdict          String
+  yearsExperience  Float?         @map("years_experience")
+  skills           String[]       @default([])
+  reason           String
+  createdAt        DateTime       @default(now()) @map("created_at")
+
+  @@unique([screeningId, applicationId])
+  @@index([screeningId, verdict])
+  @@map("cv_screening_results")
 }

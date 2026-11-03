@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Ban, ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, ChevronLeft, ChevronRight, Search, Sparkles } from "lucide-react";
 
 interface CandidateRole {
   id: string;
@@ -129,10 +129,16 @@ export default function ApplicationsPage() {
     <CmsShell>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Job Applications</h1>
-        <Button variant="outline" onClick={() => router.push("/ctrl/applications/blocked")}>
-          <Ban className="w-4 h-4 mr-2" />
-          Blocked list
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push("/ctrl/applications/screening")}>
+            <Sparkles className="w-4 h-4 mr-2" />
+            AI Screening
+          </Button>
+          <Button variant="outline" onClick={() => router.push("/ctrl/applications/blocked")}>
+            <Ban className="w-4 h-4 mr-2" />
+            Blocked list
+          </Button>
+        </div>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4 mb-6">
