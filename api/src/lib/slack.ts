@@ -1,3 +1,8 @@
+// Escape user-supplied text so it can't form links or mentions like <!channel>
+export function escapeSlack(text: string): string {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 export async function sendSlackMessage(
   text: string,
   webhookUrl: string | undefined = process.env.SLACK_WEBHOOK_URL
