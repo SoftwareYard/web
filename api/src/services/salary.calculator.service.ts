@@ -73,3 +73,19 @@ export function grossToNetMK(
         net,
     };
 }
+
+// MKD is pegged to EUR by the National Bank of North Macedonia (stable since 1997)
+export const EUR_TO_MKD_RATE = 61.3;
+
+// The four salary fields stored on an application, from the expected net salary in EUR
+export function applicationSalaryFromNetEur(netEur: number) {
+  const netMkd = Math.round(netEur * EUR_TO_MKD_RATE);
+  const grossMkd = netToGrossMK(netMkd);
+  const { net: verifiedNetMkd } = grossToNetMK(grossMkd);
+  return {
+    salaryNetEur: netEur,
+    salaryNetMkd: verifiedNetMkd,
+    salaryGrossMkd: grossMkd,
+    salaryGrossEur: Math.round(grossMkd / EUR_TO_MKD_RATE),
+  };
+}

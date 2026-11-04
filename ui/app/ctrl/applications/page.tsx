@@ -41,6 +41,7 @@ interface JobApplication {
   role: CandidateRole | null;
   hrInterviewTime: string | null;
   applicationCount: number;
+  onHold: boolean;
   createdAt: string;
 }
 
@@ -205,6 +206,11 @@ export default function ApplicationsPage() {
                       title={`${app.email} has applied ${app.applicationCount} times`}
                     >
                       Applied {app.applicationCount}×
+                    </Badge>
+                  )}
+                  {app.onHold && (
+                    <Badge variant="outline" className="ml-2 border-sky-500/60 text-sky-700 dark:text-sky-400">
+                      On hold
                     </Badge>
                   )}
                 </TableCell>

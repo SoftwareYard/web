@@ -1,6 +1,8 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middleware/auth";
+import { deleteFromBunny } from "../lib/bunny";
+import { applicationSalaryFromNetEur } from "../services/salary.calculator.service";
 
 export const applicationsRouter = Router();
 
@@ -117,7 +119,7 @@ applicationsRouter.get(
   async (req: Request, res: Response) => {
     const application = await prisma.jobApplication.findUnique({
       where: { id: req.params.id as string },
-      include: { role: true },
+      include: { role: true, profile: { omit: { cvText: true } } },
     });
 
     if (!application) {
@@ -203,5 +205,101 @@ applicationsRouter.patch(
     });
 
     res.json(application);
+  }
+);
+
+// PROTECTED: Edit an application's details; changing the salary recalculates all four salary fields
+applicationsRouter.patch(
+  "/:id",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const { fullName, email, phone, jobTitle, roleId, salaryNetEur } = req.body ?? {};
+    const data: Record<string, unknown> = {};
+
+    for (const [key, value] of Object.entries({ fullName, email, phone, jobTitle })) {
+      if (value === undefined) continue;
+      const text = typeof value === "string" ? value.trim() : "";
+      if (!text) {
+        res.status(400).json({ error: `${key} can't be empty` });
+        return;
+      }
+      data[key] = text;
+    }
+
+    if (roleId !== undefined) data.roleId = roleId || null;
+
+    if (salaryNetEur !== undefined) {
+      const salary = Number(salaryNetEur);
+      if (!Number.isInteger(salary) || salary <= 0) {
+        res.status(400).json({ error: "Expected salary must be a whole number greater than 0" });
+        return;
+      }
+      Object.assign(data, applicationSalaryFromNetEur(salary));
+    }
+
+    const exists = await prisma.jobApplication.findUnique({ where: { id: req.params.id as string } });
+    if (!exists) {
+      res.status(404).json({ error: "Application not found" });
+      return;
+    }
+
+    const application = await prisma.jobApplication.update({
+      where: { id: req.params.id as string },
+      data,
+      include: { role: true },
+    });
+    res.json(application);
+  }
+);
+
+// PROTECTED: Put an application on hold (skipped by AI scans and screenings) or release it
+applicationsRouter.patch(
+  "/:id/hold",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const onHold = req.body?.onHold === true;
+    const reason = typeof req.body?.reason === "string" ? req.body.reason.trim() || null : null;
+
+    const exists = await prisma.jobApplication.findUnique({ where: { id: req.params.id as string } });
+    if (!exists) {
+      res.status(404).json({ error: "Application not found" });
+      return;
+    }
+
+    const application = await prisma.jobApplication.update({
+      where: { id: req.params.id as string },
+      data: onHold
+        ? { onHold: true, holdReason: reason, heldAt: new Date() }
+        : { onHold: false, holdReason: null, heldAt: null },
+      select: { onHold: true, holdReason: true, heldAt: true },
+    });
+    res.json(application);
+  }
+);
+
+// PROTECTED: Permanently delete an application, its AI results and its CV file
+applicationsRouter.delete(
+  "/:id",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const application = await prisma.jobApplication.findUnique({
+      where: { id: req.params.id as string },
+    });
+    if (!application) {
+      res.status(404).json({ error: "Application not found" });
+      return;
+    }
+
+    // Profile and screening results go with it (ON DELETE CASCADE)
+    await prisma.jobApplication.delete({ where: { id: application.id } });
+
+    // Only remove files we stored, and never fail the delete over the CDN
+    if (application.cvLink && process.env.BUNNY_CDN_URL && application.cvLink.startsWith(process.env.BUNNY_CDN_URL)) {
+      await deleteFromBunny(application.cvLink).catch((err) =>
+        console.error(`Failed to delete CV file for application ${application.id}:`, err)
+      );
+    }
+
+    res.json({ success: true });
   }
 );

@@ -1,10 +1,6 @@
-import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "../lib/prisma";
+import { AiUnavailableError, askAboutCv, downloadCv } from "../lib/anthropic";
 
-// Reads ANTHROPIC_API_KEY from the environment
-const anthropic = new Anthropic();
-
-const MODEL = process.env.CV_SCREENING_MODEL || "claude-opus-5-5";
 // CVs are processed a few at a time to stay well inside API rate limits
 const CONCURRENCY = 4;
 
@@ -37,7 +33,7 @@ const RESULT_SCHEMA = {
   },
   required: ["verdict", "years_experience", "skills", "reason"],
   additionalProperties: false,
-} as const;
+};
 
 interface ScreeningVerdict {
   verdict: "match" | "no_match" | "unclear";
@@ -46,58 +42,15 @@ interface ScreeningVerdict {
   reason: string;
 }
 
-async function downloadCv(url: string): Promise<string> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`CV download failed (${res.status})`);
-  return Buffer.from(await res.arrayBuffer()).toString("base64");
-}
-
 async function screenCv(cvLink: string, criteria: string): Promise<ScreeningVerdict> {
   const pdf = await downloadCv(cvLink);
   const today = new Date().toISOString().slice(0, 10);
-
-  const response = await anthropic.beta.messages.create({
-    model: MODEL,
-    max_tokens: 16000,
-    betas: ["server-side-fallback-2026-07-01"],
-    fallbacks: "default",
-    output_config: {
-      effort: "low",
-      format: { type: "json_schema", schema: RESULT_SCHEMA },
-    },
-    // System prompt is identical for every CV, so it's cached across the run
-    system: [
-      { type: "text", text: SYSTEM_PROMPT, cache_control: { type: "ephemeral" } },
-    ],
-    messages: [
-      {
-        role: "user",
-        content: [
-          {
-            type: "document",
-            source: { type: "base64", media_type: "application/pdf", data: pdf },
-          },
-          {
-            type: "text",
-            text: `Today's date: ${today}\n\nScreening criteria:\n<criteria>\n${criteria}\n</criteria>`,
-          },
-        ],
-      },
-    ],
+  return askAboutCv<ScreeningVerdict>({
+    system: SYSTEM_PROMPT,
+    schema: RESULT_SCHEMA,
+    pdf,
+    text: `Today's date: ${today}\n\nScreening criteria:\n<criteria>\n${criteria}\n</criteria>`,
   });
-
-  if (response.stop_reason === "refusal") {
-    throw new Error("The model declined to screen this CV");
-  }
-  if (response.stop_reason === "max_tokens") {
-    throw new Error("The model's answer was cut off");
-  }
-
-  const text = response.content
-    .filter((b): b is Anthropic.Beta.BetaTextBlock => b.type === "text")
-    .map((b) => b.text)
-    .join("");
-  return JSON.parse(text) as ScreeningVerdict;
 }
 
 export async function runScreening(
@@ -106,6 +59,7 @@ export async function runScreening(
   applicationIds: string[]
 ) {
   let processed = 0;
+  let stopReason: string | null = null;
   const queue = [...applicationIds];
 
   async function worker() {
@@ -131,6 +85,12 @@ export async function runScreening(
           reason: result.reason,
         };
       } catch (err) {
+        if (err instanceof AiUnavailableError) {
+          // Account problem: stop the run instead of marking every remaining CV as an error
+          stopReason = err.message;
+          queue.length = 0;
+          return;
+        }
         console.error(`[cv-screening] ${screeningId}/${id}:`, err);
         data = {
           verdict: "error",
@@ -156,7 +116,9 @@ export async function runScreening(
   await Promise.all(Array.from({ length: CONCURRENCY }, worker));
   await prisma.cvScreening.update({
     where: { id: screeningId },
-    data: { status: "done", finishedAt: new Date() },
+    data: stopReason
+      ? { status: "interrupted", stopReason, finishedAt: new Date() }
+      : { status: "done", finishedAt: new Date() },
   });
 }
 
@@ -164,6 +126,6 @@ export async function runScreening(
 export async function markInterruptedScreenings() {
   await prisma.cvScreening.updateMany({
     where: { status: "running" },
-    data: { status: "interrupted", finishedAt: new Date() },
+    data: { status: "interrupted", stopReason: "The server restarted", finishedAt: new Date() },
   });
 }

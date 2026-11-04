@@ -54,7 +54,11 @@ export default function ScreeningPage() {
   const [criteria, setCriteria] = useState(EXAMPLE_CRITERIA);
   const [roleId, setRoleId] = useState("");
   const [appliedFrom, setAppliedFrom] = useState("");
-  const [preview, setPreview] = useState<{ count: number; max: number } | null>(null);
+  const [preview, setPreview] = useState<{
+    count: number;
+    max: number;
+    aiProblem: string | null;
+  } | null>(null);
   const [starting, setStarting] = useState(false);
 
   const loadScreenings = useCallback(async () => {
@@ -70,7 +74,7 @@ export default function ScreeningPage() {
     const params = new URLSearchParams();
     if (roleId) params.set("roleId", roleId);
     if (appliedFrom) params.set("appliedFrom", appliedFrom);
-    cmsApi<{ count: number; max: number }>(`/api/screenings/preview?${params}`)
+    cmsApi<{ count: number; max: number; aiProblem: string | null }>(`/api/screenings/preview?${params}`)
       .then(setPreview)
       .catch(() => setPreview(null));
   }, [roleId, appliedFrom]);
@@ -105,8 +109,21 @@ export default function ScreeningPage() {
       <h1 className="text-2xl font-bold mb-2">AI CV Screening</h1>
       <p className="text-sm text-muted-foreground mb-6 max-w-2xl">
         Describe what a suitable candidate looks like. Each CV is read and marked as a match, no
-        match, or unclear, with a short reason. Always open the CV before rejecting someone.
+        match, or unclear, with a short reason. Applications on hold are skipped. Always open the CV before rejecting someone.
       </p>
+
+      {preview?.aiProblem && (
+        <div className="mb-6 rounded-lg border border-destructive/50 bg-destructive/5 p-4 text-sm max-w-2xl">
+          <p className="font-medium text-destructive">The last AI run stopped: {preview.aiProblem}</p>
+          <p className="text-muted-foreground mt-1">
+            Fix it at{" "}
+            <a href="https://console.anthropic.com" target="_blank" rel="noreferrer" className="underline">
+              console.anthropic.com
+            </a>{" "}
+            (Billing) before starting a new screening.
+          </p>
+        </div>
+      )}
 
       <div className="border rounded-lg p-4 space-y-4 max-w-2xl mb-10">
         <div className="space-y-2">

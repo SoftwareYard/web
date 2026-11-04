@@ -4,8 +4,9 @@ import multer from "multer";
 import { uploadToBunny } from "../lib/bunny";
 import { mapJobTitleToRole } from "../lib/role-mapper";
 import { prisma } from "../lib/prisma";
+import { escapeSlack, sendSlackMessage } from "../lib/slack";
 import { WEBSITE_SENDER, CAREERS_SENDER, escapeHtml, escapeMultiline } from "../lib/email";
-import { grossToNetMK, netToGrossMK } from "../services/salary.calculator.service";
+import { applicationSalaryFromNetEur } from "../services/salary.calculator.service";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 export const applyRouter = Router();
@@ -22,11 +23,39 @@ const upload = multer({
   },
 });
 
-// MKD is pegged to EUR by the National Bank of North Macedonia (stable since 1997)
-const EUR_TO_MKD_RATE = 61.3;
+async function notifyNewApplication(a: {
+  applicationId: string | null;
+  position: string;
+  fullName: string;
+  email: string;
+  expectedSalary: string;
+  cvLink: string;
+}) {
+  const earlier = await prisma.jobApplication.count({
+    where: {
+      email: { equals: String(a.email).trim(), mode: "insensitive" },
+      ...(a.applicationId ? { id: { not: a.applicationId } } : {}),
+    },
+  });
 
-async function getEurToMkdRate(): Promise<number> {
-  return EUR_TO_MKD_RATE;
+  const cmsLink =
+    a.applicationId && process.env.CORS_ORIGIN
+      ? `${process.env.CORS_ORIGIN}/ctrl/applications/${a.applicationId}`
+      : null;
+  const links = [
+    ...(cmsLink ? [`<${cmsLink}|View in CMS>`] : []),
+    ...(a.cvLink ? [`<${a.cvLink}|CV>`] : []),
+  ];
+
+  const text = [
+    `:inbox_tray: *New application* — ${escapeSlack(a.position)}`,
+    `• *${escapeSlack(a.fullName)}* (${escapeSlack(a.email)})`,
+    `• Expected salary: €${Number(a.expectedSalary).toLocaleString("en-US")} net`,
+    ...(earlier > 0 ? [`• :repeat: Applied before (${earlier} earlier application${earlier > 1 ? "s" : ""})`] : []),
+    ...(links.length ? [links.join(" · ")] : []),
+  ].join("\n");
+
+  await sendSlackMessage(text);
 }
 
 applyRouter.post(
@@ -185,34 +214,36 @@ applyRouter.post(
       console.error("Resend confirmation email error:", confirmationError);
     }
 
+    let applicationId: string | null = null;
     try {
       if (!roleId) throw new Error(`No role for job title "${jobTitle}"`);
 
-      const netEur = parseInt(salaryText, 10);
 
-      const rate = await getEurToMkdRate();
-      const netMkd = Math.round(netEur * rate);
-      const grossMkd = netToGrossMK(netMkd);
-      const { net: verifiedNetMkd } = grossToNetMK(grossMkd);
-      const grossEur = Math.round(grossMkd / rate);
-
-      await prisma.jobApplication.create({
+      const created = await prisma.jobApplication.create({
         data: {
           fullName,
           phone,
           email,
-          salaryNetEur: netEur,
-          salaryNetMkd: verifiedNetMkd,
-          salaryGrossMkd: grossMkd,
-          salaryGrossEur: grossEur,
+          ...applicationSalaryFromNetEur(parseInt(salaryText, 10)),
           roleId,
           jobTitle,
           cvLink,
         },
       });
+      applicationId = created.id;
     } catch (dbError) {
       console.error("Failed to save application:", dbError);
     }
+
+    // Heads-up in sy_info; never delays or fails the application
+    notifyNewApplication({
+      applicationId,
+      position,
+      fullName,
+      email,
+      expectedSalary: salaryText,
+      cvLink,
+    }).catch((err) => console.error("[apply] Failed to send Slack notification:", err));
 
     res.json({ success: true });
   }

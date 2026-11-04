@@ -2,6 +2,7 @@ import { Router, Response } from "express";
 import { prisma } from "../lib/prisma";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import { runScreening } from "../services/cv-screening.service";
+import { aiStatus } from "../lib/anthropic";
 
 export const screeningsRouter = Router();
 
@@ -12,6 +13,7 @@ async function findApplicationIds(roleId: string | null, appliedFrom: Date | nul
   const blocked = await prisma.blockedApplicant.findMany({ select: { email: true } });
   const apps = await prisma.jobApplication.findMany({
     where: {
+      onHold: false,
       ...(roleId ? { roleId } : {}),
       ...(appliedFrom ? { createdAt: { gte: appliedFrom } } : {}),
       ...(blocked.length
@@ -41,7 +43,7 @@ function parseFilters(source: Record<string, unknown>) {
 screeningsRouter.get("/preview", requireAuth, async (req: AuthRequest, res: Response) => {
   const { roleId, appliedFrom } = parseFilters(req.query);
   const ids = await findApplicationIds(roleId, appliedFrom);
-  res.json({ count: ids.length, max: MAX_APPLICATIONS_PER_RUN });
+  res.json({ count: ids.length, max: MAX_APPLICATIONS_PER_RUN, aiProblem: aiStatus.problem });
 });
 
 // PROTECTED: Start a screening run; it continues in the background

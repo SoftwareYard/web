@@ -43,6 +43,7 @@ interface Screening {
   role: { id: string; name: string } | null;
   appliedFrom: string | null;
   status: "running" | "done" | "interrupted";
+  stopReason: string | null;
   total: number;
   processed: number;
   createdAt: string;
@@ -143,7 +144,7 @@ export default function ScreeningResultsPage({ params }: { params: Promise<{ id:
             <span>
               {screening.status === "running"
                 ? "Reading CVs..."
-                : "This run was interrupted (the server restarted). Results so far are below."}
+                : `This run stopped early: ${screening.stopReason ?? "unknown reason"}. Results so far are below.`}
             </span>
             <span className="text-muted-foreground">
               {screening.processed} / {screening.total}

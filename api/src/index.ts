@@ -29,6 +29,7 @@ import { chatBotRouter } from "./routes/chat-bot";
 import { scheduleCallRouter } from "./routes/schedule-call";
 import { caseStudiesRouter } from "./routes/case-studies";
 import { screeningsRouter } from "./routes/screenings";
+import { candidatesRouter } from "./routes/candidates";
 import { markInterruptedScreenings } from "./services/cv-screening.service";
 import { startInvoiceRenewalCron } from "./services/invoice-renewal.service";
 import { startTimeOffCarryoverCron } from "./services/time-off-carryover.service";
@@ -73,6 +74,7 @@ app.use("/api/chat-bot", chatBotRouter);
 app.use("/api/schedule-call", scheduleCallRouter);
 app.use("/api/case-studies", caseStudiesRouter);
 app.use("/api/screenings", screeningsRouter);
+app.use("/api/candidates", candidatesRouter);
 
 
 app.get("/health", (_req, res) => {

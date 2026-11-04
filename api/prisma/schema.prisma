@@ -355,10 +355,15 @@ model JobApplication {
   secondInterviewTime DateTime?      @map("second_interview_time")
   hrNotes             String?        @map("hr_notes")
   techNotes           String?        @map("tech_notes")
+  // On hold: kept (not blocked) but skipped by AI scans and screenings
+  onHold              Boolean        @default(false) @map("on_hold")
+  holdReason          String?        @map("hold_reason")
+  heldAt              DateTime?      @map("held_at")
   createdAt           DateTime       @default(now()) @map("created_at")
   updatedAt           DateTime       @updatedAt @map("updated_at")
 
   screeningResults CvScreeningResult[]
+  profile          CandidateProfile?
 
   @@map("job_applications")
 }
@@ -415,6 +420,8 @@ model CvScreening {
   appliedFrom DateTime?      @map("applied_from")
   // running | done | interrupted
   status      String         @default("running")
+  // Why an interrupted run stopped, e.g. out of API credits
+  stopReason  String?        @map("stop_reason")
   total       Int            @default(0)
   processed   Int            @default(0)
   createdById String?        @map("created_by_id")
@@ -442,4 +449,26 @@ model CvScreeningResult {
   @@unique([screeningId, applicationId])
   @@index([screeningId, verdict])
   @@map("cv_screening_results")
+}
+
+// What the AI read from an application's CV; one per application, so each CV is scanned once
+model CandidateProfile {
+  id              String         @id @default(cuid())
+  applicationId   String         @unique @map("application_id")
+  application     JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  // done | error (errors are retried on the next scan)
+  status          String
+  error           String?
+  primarySkills   String[]       @default([]) @map("primary_skills")
+  allSkills       String[]       @default([]) @map("all_skills")
+  yearsExperience Float?         @map("years_experience")
+  about           String?
+  summary         String?
+  // Plain text pulled from the PDF locally, kept for future local search
+  cvText          String?        @map("cv_text")
+  model           String?
+  scannedAt       DateTime       @default(now()) @map("scanned_at")
+
+  @@index([status])
+  @@map("candidate_profiles")
 }
