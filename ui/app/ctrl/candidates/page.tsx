@@ -1,7 +1,7 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { Suspense, useCallback, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { cmsApi } from "@/lib/cms-api";
 import { Button } from "@/components/ui/button";
@@ -75,23 +75,52 @@ interface ScanStatus {
 const formatDate = (iso: string) =>
   new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
 
+const SORTS = ["scanned", "applied", "experience", "salary"];
+
 export default function CandidatesPage() {
+  return (
+    <Suspense>
+      <CandidatesList />
+    </Suspense>
+  );
+}
+
+function CandidatesList() {
   const router = useRouter();
+  const pathname = usePathname();
+  // Paging and filters live in the URL, so Back from an application returns to the same view
+  const searchParams = useSearchParams();
+  const param = (key: string) => searchParams.get(key) ?? "";
+
   const [candidates, setCandidates] = useState<Candidate[]>([]);
   const [roles, setRoles] = useState<CandidateRole[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get("page")) || 1));
   const [scan, setScan] = useState<ScanStatus | null>(null);
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const [search, setSearch] = useState("");
-  const [skills, setSkills] = useState("");
-  const [minYears, setMinYears] = useState("");
-  const [maxSalary, setMaxSalary] = useState("");
-  const [roleId, setRoleId] = useState("");
-  const [sort, setSort] = useState("scanned");
-  const [includeOnHold, setIncludeOnHold] = useState(false);
+  const [search, setSearch] = useState(() => param("search"));
+  const [skills, setSkills] = useState(() => param("skills"));
+  const [minYears, setMinYears] = useState(() => param("minYears"));
+  const [maxSalary, setMaxSalary] = useState(() => param("maxSalary"));
+  const [roleId, setRoleId] = useState(() => param("role"));
+  const [sort, setSort] = useState(() => (SORTS.includes(param("sort")) ? param("sort") : "scanned"));
+  const [includeOnHold, setIncludeOnHold] = useState(() => searchParams.get("onHold") === "1");
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set("page", String(page));
+    if (search) params.set("search", search);
+    if (skills) params.set("skills", skills);
+    if (minYears) params.set("minYears", minYears);
+    if (maxSalary) params.set("maxSalary", maxSalary);
+    if (roleId) params.set("role", roleId);
+    if (sort !== "scanned") params.set("sort", sort);
+    if (includeOnHold) params.set("onHold", "1");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [router, pathname, page, search, skills, minYears, maxSalary, roleId, sort, includeOnHold]);
 
   const loadCandidates = useCallback(async () => {
     const params = new URLSearchParams({ page: String(page), limit: "25", sort });

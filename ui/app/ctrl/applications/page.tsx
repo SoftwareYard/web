@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, Suspense } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { cmsApi } from "@/lib/cms-api";
 import {
@@ -54,16 +54,42 @@ interface PaginatedResponse {
 }
 
 export default function ApplicationsPage() {
+  return (
+    <Suspense>
+      <ApplicationsList />
+    </Suspense>
+  );
+}
+
+function ApplicationsList() {
   const router = useRouter();
+  const pathname = usePathname();
+  // Paging and filters live in the URL, so Back from an application returns to the same view
+  const searchParams = useSearchParams();
   const [applications, setApplications] = useState<JobApplication[]>([]);
   const [roles, setRoles] = useState<CandidateRole[]>([]);
   const [total, setTotal] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
-  const [search, setSearch] = useState("");
-  const [roleFilter, setRoleFilter] = useState("");
-  const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [page, setPage] = useState(() => Math.max(1, Number(searchParams.get("page")) || 1));
+  const [limit, setLimit] = useState(() =>
+    [10, 25, 50].includes(Number(searchParams.get("limit"))) ? Number(searchParams.get("limit")) : 10
+  );
+  const [search, setSearch] = useState(() => searchParams.get("search") ?? "");
+  const [roleFilter, setRoleFilter] = useState(() => searchParams.get("role") ?? "");
+  const [sortDir, setSortDir] = useState<"asc" | "desc">(() =>
+    searchParams.get("sort") === "asc" ? "asc" : "desc"
+  );
+
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (page > 1) params.set("page", String(page));
+    if (limit !== 10) params.set("limit", String(limit));
+    if (search) params.set("search", search);
+    if (roleFilter) params.set("role", roleFilter);
+    if (sortDir === "asc") params.set("sort", "asc");
+    const query = params.toString();
+    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+  }, [router, pathname, page, limit, search, roleFilter, sortDir]);
 
   const loadRoles = useCallback(async () => {
     const data = await cmsApi<CandidateRole[]>("/api/applications/roles");
