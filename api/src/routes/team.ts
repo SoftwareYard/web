@@ -412,6 +412,82 @@ teamRouter.put("/:id/meetings/:meetingId", requireAuth, async (req: Request, res
   }
 });
 
+function noteData(body: Request["body"]) {
+  const hrNotes = typeof body.hrNotes === "string" ? body.hrNotes.trim() : "";
+  const memberNotes = typeof body.memberNotes === "string" ? body.memberNotes.trim() : "";
+  const date = new Date(body.date);
+  return {
+    date,
+    hrNotes: hrNotes || null,
+    memberNotes: memberNotes || null,
+    error: isNaN(date.getTime())
+      ? "A valid date is required"
+      : !hrNotes && !memberNotes
+        ? "Add HR notes or member notes"
+        : null,
+  };
+}
+
+// PROTECTED: Get notes for a team member
+teamRouter.get("/:id/notes", requireAuth, async (req: Request, res: Response) => {
+  const memberId = req.params.id as string;
+  const notes = await prisma.memberNote.findMany({
+    where: { memberId },
+    orderBy: [{ date: "desc" }, { createdAt: "desc" }],
+  });
+  res.json(notes);
+});
+
+// PROTECTED: Create a note for a team member
+teamRouter.post("/:id/notes", requireAuth, async (req: Request, res: Response) => {
+  const memberId = req.params.id as string;
+  const { error, ...data } = noteData(req.body);
+  if (error) {
+    res.status(400).json({ error });
+    return;
+  }
+  const member = await prisma.teamMember.findUnique({ where: { id: memberId }, select: { id: true } });
+  if (!member) {
+    res.status(404).json({ error: "Team member not found" });
+    return;
+  }
+  const note = await prisma.memberNote.create({ data: { memberId, ...data } });
+  res.status(201).json(note);
+});
+
+// PROTECTED: Update a team member's note
+teamRouter.put("/:id/notes/:noteId", requireAuth, async (req: Request, res: Response) => {
+  const memberId = req.params.id as string;
+  const noteId = req.params.noteId as string;
+  const { error, ...data } = noteData(req.body);
+  if (error) {
+    res.status(400).json({ error });
+    return;
+  }
+  // Scoped to the member so a note can't be edited through another member's URL
+  const { count } = await prisma.memberNote.updateMany({
+    where: { id: noteId, memberId },
+    data,
+  });
+  if (count === 0) {
+    res.status(404).json({ error: "Note not found" });
+    return;
+  }
+  res.json(await prisma.memberNote.findUnique({ where: { id: noteId } }));
+});
+
+// PROTECTED: Delete a team member's note
+teamRouter.delete("/:id/notes/:noteId", requireAuth, async (req: Request, res: Response) => {
+  const memberId = req.params.id as string;
+  const noteId = req.params.noteId as string;
+  const { count } = await prisma.memberNote.deleteMany({ where: { id: noteId, memberId } });
+  if (count === 0) {
+    res.status(404).json({ error: "Note not found" });
+    return;
+  }
+  res.json({ success: true });
+});
+
 // PROTECTED: Upload a contract document for a team member
 teamRouter.post(
   "/:id/contract-document",

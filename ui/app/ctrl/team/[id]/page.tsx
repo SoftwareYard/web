@@ -9,6 +9,7 @@ import Image from "next/image";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { MeetingForm, MeetingFormValues } from "@/components/ctrl/meeting-form";
 import { PortalAccessDialog } from "@/components/ctrl/portal-access-dialog";
+import { MemberNotes } from "@/components/ctrl/member-notes";
 import { cmsApi } from "@/lib/cms-api";
 import { Meeting, MEETING_FIELDS } from "@/lib/meeting";
 import {
@@ -829,6 +830,8 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
             </Table>
           )}
         </div>
+
+        <MemberNotes memberId={id} />
       </div>
 
       <MeetingForm

@@ -123,6 +123,7 @@ model TeamMember {
   updatedAt           DateTime  @updatedAt @map("updated_at")
 
   oneOnOneMeetings OneOnOneMeeting[]
+  notes            MemberNote[]
   payrises         Payrise[]
   assets           Asset[]
   assetHistory     AssetHistory[]
@@ -171,6 +172,21 @@ model OneOnOneMeeting {
   updatedAt              DateTime   @updatedAt @map("updated_at")
 
   @@map("one_on_one_meetings")
+}
+
+// Dated notes on a team member: what HR noted and what the member said
+model MemberNote {
+  id          String     @id @default(cuid())
+  memberId    String     @map("member_id")
+  member      TeamMember @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  date        DateTime
+  hrNotes     String?    @map("hr_notes")
+  memberNotes String?    @map("member_notes")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+
+  @@index([memberId])
+  @@map("member_notes")
 }
 
 model Payrise {
