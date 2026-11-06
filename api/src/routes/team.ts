@@ -2,7 +2,7 @@ import { Router, Request, Response } from "express";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
-import { requireAuth, AuthRequest } from "../middleware/auth";
+import { requireAuth, getAdminId, AuthRequest } from "../middleware/auth";
 import { uploadToBunny } from "../lib/bunny";
 
 export const teamRouter = Router();
@@ -73,8 +73,30 @@ function sanitizePublicMember<
   return rest;
 }
 
-// PUBLIC: Get active team members (?includeInactive=true also returns deactivated ones, for the CMS)
+// Fields shown on the public website team section — nothing else may leave
+// the API without an admin login (salaries, phones, contracts, clients, ...)
+const publicMemberSelect = {
+  id: true,
+  name: true,
+  role: true,
+  image: true,
+  bio: true,
+  email: true,
+} as const;
+
+// PUBLIC: Get active team members. Logged-in admins get the full CMS view
+// (?includeInactive=true also returns deactivated ones).
 teamRouter.get("/", async (req: Request, res: Response) => {
+  if (!getAdminId(req)) {
+    const members = await prisma.teamMember.findMany({
+      where: { isActive: true },
+      orderBy: { sortOrder: "asc" },
+      select: publicMemberSelect,
+    });
+    res.json(members);
+    return;
+  }
+
   const includeInactive = req.query.includeInactive === "true";
   const members = await prisma.teamMember.findMany({
     where: includeInactive ? {} : { isActive: true },

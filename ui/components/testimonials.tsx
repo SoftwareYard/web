@@ -10,11 +10,12 @@ const testimonials = [
   {
     quote:
       "The engineers provided by Software Yard were exactly what was required for our project and a good deal cheaper than other vendors we worked with, without compromising on quality. Very happy and will work with Software Yard again.",
-    author: "Stephen Hyland",
-    role: "Head of Technology",
-    company: "VPAR",
+    // Anonymised at the client's request
+    author: "Head of Technology",
+    role: "",
+    company: "A golf platform",
     rating: 5,
-    initials: "SH",
+    initials: "GP",
   },
   {
     quote:
@@ -135,7 +136,9 @@ export function TestimonialsSection() {
                     <div className="text-left">
                       <div className="font-semibold text-background">{testimonial.author}</div>
                       <div className="text-sm text-background/60">
-                        {testimonial.role} at {testimonial.company}
+                        {testimonial.role
+                          ? `${testimonial.role} at ${testimonial.company}`
+                          : testimonial.company}
                       </div>
                     </div>
                   </div>

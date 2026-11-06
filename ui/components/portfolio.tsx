@@ -10,7 +10,7 @@ const categories = ["All", "Web Apps", "Mobile", "E-commerce", "Enterprise"]
 
 const projects = [
   {
-    title: "VPAR Golf Platform",
+    title: "Golf Platform",
     category: "Web Apps",
     description: "A comprehensive golf scoring and tournament management platform used by clubs worldwide.",
     tags: ["React", "Node.js", "PostgreSQL"],

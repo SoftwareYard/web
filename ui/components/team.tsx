@@ -23,7 +23,16 @@ async function getTeam(): Promise<TeamMember[]> {
       console.error(`getTeam: ${API_URL}/api/team responded ${res.status}`)
       return []
     }
-    return res.json()
+    const members: TeamMember[] = await res.json()
+    // Only pass what the page shows; everything here is sent to the browser
+    return members.map(({ id, name, role, image, bio, email }) => ({
+      id,
+      name,
+      role,
+      image,
+      bio,
+      email,
+    }))
   } catch (err) {
     console.error(`getTeam: fetch to ${API_URL}/api/team failed`, err)
     return []

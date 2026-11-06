@@ -288,7 +288,7 @@ export function CaseStudyForm({
                       <FormLabel>Client Name</FormLabel>
                       <FormControl>
                         <Input
-                          placeholder="VPAR"
+                          placeholder="Acme Ltd"
                           {...field}
                           onChange={(e) => {
                             field.onChange(e);
@@ -309,7 +309,7 @@ export function CaseStudyForm({
                     <FormItem>
                       <FormLabel>Slug</FormLabel>
                       <FormControl>
-                        <Input placeholder="vpar" {...field} />
+                        <Input placeholder="acme-ltd" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -692,7 +692,7 @@ export function CaseStudyForm({
                     <FormItem>
                       <FormLabel>Author</FormLabel>
                       <FormControl>
-                        <Input placeholder="Stephen Hyland" {...field} />
+                        <Input placeholder="Jane Smith" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

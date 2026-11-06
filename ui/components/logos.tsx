@@ -1,7 +1,6 @@
 "use client"
 
 const logos = [
-  "VPAR",
   "VSC",
   "DevYard",
   "TechFlow",

@@ -23,8 +23,13 @@ export async function requireTeamMemberAuth(
   let teamMemberId: string;
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
-      teamMemberId: string;
+      teamMemberId?: string;
     };
+    // Admin tokens share the secret but have no teamMemberId
+    if (typeof decoded.teamMemberId !== "string") {
+      res.status(401).json({ error: "Invalid or expired token" });
+      return;
+    }
     teamMemberId = decoded.teamMemberId;
   } catch {
     res.status(401).json({ error: "Invalid or expired token" });
