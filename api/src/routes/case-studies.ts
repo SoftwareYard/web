@@ -1,7 +1,8 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, getAdminId } from "../middleware/auth";
+import { toPublicCaseStudy } from "../lib/anonymize-case-study";
 import { uploadToBunny, deleteFromBunny } from "../lib/bunny";
 
 export const caseStudiesRouter = Router();
@@ -44,6 +45,13 @@ async function deleteImages(urls: string[]) {
   await Promise.all(urls.map((url) => deleteFromBunny(url).catch(() => {})));
 }
 
+function validate(data: ReturnType<typeof toData>) {
+  if (!data.showClient && !data.anonymousName) {
+    return "Add an anonymous name to show instead of the client name";
+  }
+  return null;
+}
+
 function isSlugTaken(err: unknown) {
   return (err as { code?: string })?.code === "P2002";
 }
@@ -71,6 +79,8 @@ function toData(body: Request["body"]) {
     color,
     logoImage,
     logoOnDark,
+    showClient,
+    anonymousName,
     coverImage,
     challengeImage,
     outcomeImage,
@@ -96,6 +106,8 @@ function toData(body: Request["body"]) {
     color,
     logoImage: logoImage || null,
     logoOnDark: !!logoOnDark,
+    showClient: showClient ?? true,
+    anonymousName: optionalText(anonymousName),
     coverImage: coverImage || null,
     challengeImage: challengeImage || null,
     outcomeImage: outcomeImage || null,
@@ -123,14 +135,17 @@ function toData(body: Request["body"]) {
   };
 }
 
-// PUBLIC: Get all case studies (active only by default, all if ?all=true)
+// PUBLIC: Get active case studies. Logged-in admins can pass ?all=true to get
+// hidden ones too, with the real client names (the public view hides them
+// for anonymous case studies).
 caseStudiesRouter.get("/", async (req: Request, res: Response) => {
-  const showAll = req.query.all === "true";
+  const isAdmin = !!getAdminId(req);
+  const showAll = isAdmin && req.query.all === "true";
   const caseStudies = await prisma.caseStudy.findMany({
     where: showAll ? {} : { isActive: true },
     orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
   });
-  res.json(caseStudies);
+  res.json(showAll ? caseStudies : caseStudies.map(toPublicCaseStudy));
 });
 
 // PUBLIC: Get single case study by slug
@@ -143,7 +158,7 @@ caseStudiesRouter.get("/by-slug/:slug", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  res.json(caseStudy);
+  res.json(toPublicCaseStudy(caseStudy));
 });
 
 // PROTECTED: Upload a section image, returns its CDN url (saved with the case study)
@@ -175,8 +190,14 @@ caseStudiesRouter.post(
 
 // PROTECTED: Create case study
 caseStudiesRouter.post("/", requireAuth, async (req: Request, res: Response) => {
+  const data = toData(req.body);
+  const error = validate(data);
+  if (error) {
+    res.status(400).json({ error });
+    return;
+  }
   try {
-    const caseStudy = await prisma.caseStudy.create({ data: toData(req.body) });
+    const caseStudy = await prisma.caseStudy.create({ data });
     res.status(201).json(caseStudy);
   } catch (err) {
     if (isSlugTaken(err)) {
@@ -195,11 +216,14 @@ caseStudiesRouter.put("/:id", requireAuth, async (req: Request, res: Response) =
     res.status(404).json({ error: "Not found" });
     return;
   }
+  const data = toData(req.body);
+  const error = validate(data);
+  if (error) {
+    res.status(400).json({ error });
+    return;
+  }
   try {
-    const caseStudy = await prisma.caseStudy.update({
-      where: { id },
-      data: toData(req.body),
-    });
+    const caseStudy = await prisma.caseStudy.update({ where: { id }, data });
     const kept = new Set(imageUrls(caseStudy));
     await deleteImages(imageUrls(existing).filter((url) => !kept.has(url)));
     res.json(caseStudy);

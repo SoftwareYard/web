@@ -121,7 +121,14 @@ export default function CaseStudiesPage() {
             {caseStudies.map((caseStudy) => (
               <TableRow key={caseStudy.id}>
                 <TableCell>{caseStudy.sortOrder}</TableCell>
-                <TableCell className="font-medium">{caseStudy.name}</TableCell>
+                <TableCell className="font-medium">
+                  {caseStudy.name}
+                  {!caseStudy.showClient && (
+                    <div className="text-xs font-normal text-muted-foreground">
+                      Shown as &quot;{caseStudy.anonymousName}&quot;
+                    </div>
+                  )}
+                </TableCell>
                 <TableCell className="max-w-xs truncate">
                   {caseStudy.headline}
                 </TableCell>

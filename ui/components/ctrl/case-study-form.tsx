@@ -48,6 +48,8 @@ const caseStudySchema = z.object({
   color: z.string().min(1, "Color is required"),
   logoImage: z.string().nullable(),
   logoOnDark: z.boolean(),
+  showClient: z.boolean(),
+  anonymousName: z.string(),
   coverImage: z.string().nullable(),
   challengeImage: z.string().nullable(),
   outcomeImage: z.string().nullable(),
@@ -70,6 +72,9 @@ const caseStudySchema = z.object({
   testimonialRole: z.string(),
   sortOrder: z.coerce.number().int(),
   isActive: z.boolean().default(true),
+}).refine((v) => v.showClient || v.anonymousName.trim(), {
+  message: "Add the name to show instead of the client",
+  path: ["anonymousName"],
 });
 
 const UPLOAD_PATH = "/api/case-studies/images";
@@ -97,6 +102,8 @@ function toFormValues(caseStudy: CaseStudy): CaseStudyFormValues {
     color: caseStudy.color,
     logoImage: caseStudy.logoImage,
     logoOnDark: caseStudy.logoOnDark,
+    showClient: caseStudy.showClient,
+    anonymousName: caseStudy.anonymousName ?? "",
     coverImage: caseStudy.coverImage,
     challengeImage: caseStudy.challengeImage,
     outcomeImage: caseStudy.outcomeImage,
@@ -143,6 +150,68 @@ async function isLightImage(file: File): Promise<boolean> {
   } finally {
     URL.revokeObjectURL(url);
   }
+}
+
+function normalize(text: string) {
+  return text.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// Lists places that would still reveal the client on an anonymous case study
+function ClientMentionWarnings({ values }: { values: CaseStudyFormValues }) {
+  const name = values.name.trim();
+  if (!name) return null;
+
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const mentions = new RegExp(`(^|[^\\p{L}\\p{N}])${escaped}(?![\\p{L}\\p{N}])`, "iu");
+  const fields: [string, string | undefined][] = [
+    ["Headline", values.headline],
+    ["Summary", values.summary],
+    ["The Challenge", values.challenge],
+    ["The Outcome", values.outcome],
+    ["Testimonial quote", values.testimonialQuote],
+    ["Testimonial role", values.testimonialRole],
+    ["Services", values.services.map((s) => s.value).join(" ")],
+    ["Technologies", values.technologies.map((t) => t.value).join(" ")],
+    ["Stats", values.stats.map((s) => `${s.value} ${s.label}`).join(" ")],
+    ...values.steps.map(
+      (step, i): [string, string] => [`Step ${i + 1}`, `${step.title} ${step.description}`]
+    ),
+  ];
+  const textHits = fields.filter(([, text]) => text && mentions.test(text)).map(([label]) => label);
+
+  const key = normalize(name);
+  const images = [
+    values.coverImage,
+    values.challengeImage,
+    values.outcomeImage,
+    ...values.steps.map((s) => s.image),
+  ];
+  const imageHit = key.length > 2 && images.some((url) => url && normalize(url).includes(key));
+  const slugHit = key.length > 2 && normalize(values.slug).includes(key);
+
+  const warnings = [
+    textHits.length > 0 &&
+      `"${name}" is mentioned in: ${textHits.join(", ")}. It will show as "the client" — reword it if the sentence reads oddly.`,
+    slugHit && `The slug contains the client name, so the page address reveals it. Change the slug.`,
+    imageHit && `An image file name contains the client name. Re-upload it with a neutral file name.`,
+    values.testimonialAuthor.trim() &&
+      `The testimonial author's name is hidden on the website, only the role is shown.`,
+  ].filter(Boolean) as string[];
+
+  if (warnings.length === 0) {
+    return (
+      <p className="text-xs text-muted-foreground">
+        No mentions of &quot;{name}&quot; found in the text, slug or image names.
+      </p>
+    );
+  }
+  return (
+    <ul className="text-xs space-y-1 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-400 p-3 list-disc pl-6">
+      {warnings.map((w) => (
+        <li key={w}>{w}</li>
+      ))}
+    </ul>
+  );
 }
 
 function slugify(text: string): string {
@@ -226,6 +295,8 @@ export function CaseStudyForm({
       color: caseStudyColors[0].value,
       logoImage: null,
       logoOnDark: false,
+      showClient: true,
+      anonymousName: "",
       coverImage: null,
       challengeImage: null,
       outcomeImage: null,
@@ -260,6 +331,7 @@ export function CaseStudyForm({
       testimonialQuote: values.testimonialQuote.trim() || null,
       testimonialAuthor: values.testimonialAuthor.trim() || null,
       testimonialRole: values.testimonialRole.trim() || null,
+      anonymousName: values.anonymousName.trim() || null,
     });
     form.reset();
   };
@@ -292,7 +364,7 @@ export function CaseStudyForm({
                           {...field}
                           onChange={(e) => {
                             field.onChange(e);
-                            if (!defaultValues) {
+                            if (!defaultValues && form.getValues("showClient")) {
                               form.setValue("slug", slugify(e.target.value));
                             }
                           }}
@@ -409,6 +481,57 @@ export function CaseStudyForm({
                   </FormItem>
                 )}
               />
+            </div>
+
+            {/* Client visibility */}
+            <div className="rounded-lg border p-4 space-y-4">
+              <FormField
+                control={form.control}
+                name="showClient"
+                render={({ field }) => (
+                  <FormItem className="flex items-start gap-3">
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                    <div className="!mt-0">
+                      <FormLabel>Show client name &amp; logo on the website</FormLabel>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Turn off for clients who can&apos;t be named. The website then hides the
+                        logo and testimonial author, shows the name below instead, and replaces
+                        every mention of the client name in the text with &quot;the client&quot;.
+                        Your text here is kept as is.
+                      </p>
+                    </div>
+                  </FormItem>
+                )}
+              />
+              {!form.watch("showClient") && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="anonymousName"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Name shown instead</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="A golf platform"
+                            {...field}
+                            onChange={(e) => {
+                              field.onChange(e);
+                              if (!defaultValues) {
+                                form.setValue("slug", slugify(e.target.value));
+                              }
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <ClientMentionWarnings values={form.watch()} />
+                </>
+              )}
             </div>
 
             {/* Logo + cover */}

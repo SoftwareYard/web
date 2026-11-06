@@ -22,6 +22,8 @@ export interface CaseStudy {
   color: string
   logoImage: string | null
   logoOnDark: boolean
+  showClient: boolean
+  anonymousName: string | null
   coverImage: string | null
   challengeImage: string | null
   outcomeImage: string | null

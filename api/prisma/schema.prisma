@@ -409,6 +409,10 @@ model CaseStudy {
   color             String
   logoImage         String?  @map("logo_image")
   logoOnDark        Boolean  @default(false) @map("logo_on_dark")
+  // When false the public site hides the name, logo and testimonial author,
+  // shows anonymousName instead and rewrites mentions to "the client"
+  showClient        Boolean  @default(true) @map("show_client")
+  anonymousName     String?  @map("anonymous_name")
   coverImage        String?  @map("cover_image")
   challengeImage    String?  @map("challenge_image")
   outcomeImage      String?  @map("outcome_image")
