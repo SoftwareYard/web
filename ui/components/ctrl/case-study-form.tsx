@@ -196,6 +196,8 @@ function ClientMentionWarnings({ values }: { values: CaseStudyFormValues }) {
     imageHit && `An image file name contains the client name. Re-upload it with a neutral file name.`,
     values.testimonialAuthor.trim() &&
       `The testimonial author's name is hidden on the website, only the role is shown.`,
+    images.some(Boolean) &&
+      `Check the pictures themselves don't show the client's logo, app name or branding — those can't be detected automatically.`,
   ].filter(Boolean) as string[];
 
   if (warnings.length === 0) {
