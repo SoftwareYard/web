@@ -14,6 +14,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { DateInput, isoDateOrEmpty } from "@/components/ui/date-input";
 import { Button } from "@/components/ui/button";
 import { cmsApi } from "@/lib/cms-api";
 import { Loader2 } from "lucide-react";
@@ -33,7 +34,7 @@ interface Profile {
 const profileSchema = z.object({
   phone: z.string().optional(),
   address: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.string().optional().refine(isoDateOrEmpty, "Use the format dd-mm-yyyy"),
   secondContactName: z.string().optional(),
   secondContactPhone: z.string().optional(),
 });
@@ -122,7 +123,7 @@ export function BasicInfoTab() {
                   <FormItem>
                     <FormLabel>Date of Birth</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <DateInput {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

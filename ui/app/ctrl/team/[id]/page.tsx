@@ -53,6 +53,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
+import { DateInput, isoDateOrEmpty } from "@/components/ui/date-input";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, Loader2, Pencil, Plus, Upload, X } from "lucide-react";
@@ -104,9 +105,9 @@ const teamSchema = z.object({
   address: z.string().optional(),
   city: z.string().optional(),
   embg: z.string().optional(),
-  dateOfBirth: z.string().optional(),
+  dateOfBirth: z.string().optional().refine(isoDateOrEmpty, "Use the format dd-mm-yyyy"),
   clientId: z.string().optional(),
-  hireDate: z.string().optional(),
+  hireDate: z.string().optional().refine(isoDateOrEmpty, "Use the format dd-mm-yyyy"),
   currentSalaryEur: z.string().optional(),
   currentSalaryGross: z.string().optional(),
   contractInMonths: z.string().optional(),
@@ -630,8 +631,9 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                     <FormItem>
                       <FormLabel>Date of Birth</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <DateInput {...field} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -696,8 +698,9 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                     <FormItem>
                       <FormLabel>Hire Date</FormLabel>
                       <FormControl>
-                        <Input type="date" {...field} />
+                        <DateInput {...field} />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
