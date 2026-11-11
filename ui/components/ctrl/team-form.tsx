@@ -64,6 +64,7 @@ const teamSchema = z.object({
   contractInMonths: z.string().optional(),
   lastContractDate: z.string().optional(),
   sortOrder: z.coerce.number().default(0),
+  annualLeaveDays: z.coerce.number().int("Use a whole number").min(0).max(365).default(20),
 });
 
 export type TeamFormValues = z.infer<typeof teamSchema>;
@@ -117,6 +118,7 @@ export function TeamForm({
     contractInMonths: "",
     lastContractDate: "",
     sortOrder: 0,
+    annualLeaveDays: 20,
   };
 
   if (defaultValues) {
@@ -143,6 +145,7 @@ export function TeamForm({
       : "";
     defaults.lastContractDate = toDateInputValue(defaultValues.lastContractDate);
     defaults.sortOrder = (defaultValues.sortOrder as number) ?? 0;
+    defaults.annualLeaveDays = (defaultValues.annualLeaveDays as number) ?? 20;
   }
 
   const form = useForm<TeamFormValues>({
@@ -169,6 +172,7 @@ export function TeamForm({
     fd.append("contractInMonths", values.contractInMonths || "");
     fd.append("lastContractDate", values.lastContractDate || "");
     fd.append("sortOrder", String(values.sortOrder));
+    fd.append("annualLeaveDays", String(values.annualLeaveDays));
     if (imageFile) {
       fd.append("image", imageFile);
     }
@@ -524,18 +528,33 @@ export function TeamForm({
                 />
               </div>
             </div>
-            <FormField
-              control={form.control}
-              name="sortOrder"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Sort Order</FormLabel>
-                  <FormControl>
-                    <Input type="number" {...field} />
-                  </FormControl>
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-2 gap-3">
+              <FormField
+                control={form.control}
+                name="annualLeaveDays"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Annual Leave Days</FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} max={365} placeholder="20" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="sortOrder"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Sort Order</FormLabel>
+                    <FormControl>
+                      <Input type="number" {...field} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+            </div>
             <div className="flex justify-end gap-2 pt-2">
               <Button
                 type="button"

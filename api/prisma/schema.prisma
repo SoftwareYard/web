@@ -107,6 +107,7 @@ model TeamMember {
   secondContactName   String?   @map("second_contact_name")
   secondContactPhone  String?   @map("second_contact_phone")
   hireDate            DateTime? @map("hire_date")
+  annualLeaveDays     Int       @default(20) @map("annual_leave_days")
   currentSalaryEur    Float?    @map("current_salary_eur")
   currentSalaryGross  Float?    @map("current_salary_gross")
   invoiceValue        Float?    @map("invoice_value")

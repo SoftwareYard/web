@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 
+// Default for new team members; each member's own allowance is TeamMember.annualLeaveDays
 export const ANNUAL_ALLOWANCE_DAYS = 20;
 export const MAX_CARRYOVER_DAYS = 5;
 
@@ -116,6 +117,11 @@ export async function getOrCreateBalance(employeeId: string, year: number) {
     where: { employeeId_year: { employeeId, year: year - 1 } },
   });
 
+  const member = await prisma.teamMember.findUnique({
+    where: { id: employeeId },
+    select: { annualLeaveDays: true },
+  });
+
   let carriedOverDays = 0;
   if (priorYear) {
     const priorReserved = await getReservedDays(employeeId, year - 1);
@@ -133,9 +139,18 @@ export async function getOrCreateBalance(employeeId: string, year: number) {
     create: {
       employeeId,
       year,
-      allowanceDays: ANNUAL_ALLOWANCE_DAYS,
+      allowanceDays: member?.annualLeaveDays ?? ANNUAL_ALLOWANCE_DAYS,
       carriedOverDays,
     },
+  });
+}
+
+// Applies a changed allowance to the current year and any later balances already
+// created; past years keep the allowance they had.
+export async function applyAnnualLeaveDays(employeeId: string, annualLeaveDays: number) {
+  await prisma.timeOffBalance.updateMany({
+    where: { employeeId, year: { gte: new Date().getFullYear() } },
+    data: { allowanceDays: annualLeaveDays },
   });
 }
 

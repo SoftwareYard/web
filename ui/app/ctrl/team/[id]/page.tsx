@@ -82,6 +82,7 @@ interface TeamMember {
   lastContractDate: string | null;
   nextContractDate: string | null;
   sortOrder: number;
+  annualLeaveDays: number;
   hasPortalAccess: boolean;
 }
 
@@ -113,6 +114,7 @@ const teamSchema = z.object({
   contractInMonths: z.string().optional(),
   lastContractDate: z.string().optional(),
   sortOrder: z.coerce.number().default(0),
+  annualLeaveDays: z.coerce.number().int("Use a whole number").min(0).max(365).default(20),
 });
 
 type FormValues = z.infer<typeof teamSchema>;
@@ -265,6 +267,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       contractInMonths: "",
       lastContractDate: "",
       sortOrder: 0,
+      annualLeaveDays: 20,
     },
   });
 
@@ -297,6 +300,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
       contractInMonths: m.contractInMonths != null ? String(m.contractInMonths) : "",
       lastContractDate: toDateInputValue(m.lastContractDate),
       sortOrder: m.sortOrder,
+      annualLeaveDays: m.annualLeaveDays ?? 20,
     });
   }, [id, form]);
 
@@ -323,6 +327,7 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
     fd.append("contractInMonths", values.contractInMonths || "");
     fd.append("lastContractDate", values.lastContractDate || "");
     fd.append("sortOrder", String(values.sortOrder));
+    fd.append("annualLeaveDays", String(values.annualLeaveDays));
     if (imageFile) fd.append("image", imageFile);
 
     const res = await fetch(`${API_URL}/api/team/${id}`, {
@@ -764,18 +769,33 @@ export default function TeamMemberDetailPage({ params }: { params: Promise<{ id:
                     className="bg-muted text-muted-foreground"
                   />
                 </div>
-                <FormField
-                  control={form.control}
-                  name="sortOrder"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Sort Order</FormLabel>
-                      <FormControl>
-                        <Input type="number" {...field} />
-                      </FormControl>
-                    </FormItem>
-                  )}
-                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={form.control}
+                    name="annualLeaveDays"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Annual Leave Days</FormLabel>
+                        <FormControl>
+                          <Input type="number" min={0} max={365} placeholder="20" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="sortOrder"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sort Order</FormLabel>
+                        <FormControl>
+                          <Input type="number" {...field} />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                </div>
               </div>
 
               <div className="flex justify-end pt-2">

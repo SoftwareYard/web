@@ -4,8 +4,16 @@ import bcrypt from "bcryptjs";
 import { prisma } from "../lib/prisma";
 import { requireAuth, getAdminId, AuthRequest } from "../middleware/auth";
 import { uploadToBunny } from "../lib/bunny";
+import { applyAnnualLeaveDays } from "../lib/time-off";
 
 export const teamRouter = Router();
+
+// undefined = not sent (keep the current value), null = invalid
+function parseAnnualLeaveDays(value: unknown): number | undefined | null {
+  if (value === undefined || value === "") return undefined;
+  const n = Number(value);
+  return Number.isInteger(n) && n >= 0 && n <= 365 ? n : null;
+}
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -126,8 +134,14 @@ teamRouter.post(
   requireAuth,
   upload.single("image"),
   async (req: Request, res: Response) => {
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, dateOfBirth, clientId } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, dateOfBirth, clientId, annualLeaveDays } =
       req.body;
+
+    const parsedAnnualLeaveDays = parseAnnualLeaveDays(annualLeaveDays);
+    if (parsedAnnualLeaveDays === null) {
+      res.status(400).json({ error: "Annual leave days must be a whole number between 0 and 365" });
+      return;
+    }
 
     if (email) {
       const existing = await prisma.teamMember.findUnique({ where: { email } });
@@ -171,6 +185,7 @@ teamRouter.post(
         embg: embg || null,
         dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
         clientId: clientId || null,
+        ...(parsedAnnualLeaveDays !== undefined ? { annualLeaveDays: parsedAnnualLeaveDays } : {}),
       },
     });
     res.status(201).json(sanitizeMember(member));
@@ -184,8 +199,14 @@ teamRouter.put(
   upload.single("image"),
   async (req: Request, res: Response) => {
     const id = req.params.id as string;
-    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, dateOfBirth, clientId } =
+    const { name, role, bio, email, phone, hireDate, currentSalaryEur, currentSalaryGross, contractInMonths, lastContractDate, sortOrder, archiveNo, address, city, embg, dateOfBirth, clientId, annualLeaveDays } =
       req.body;
+
+    const parsedAnnualLeaveDays = parseAnnualLeaveDays(annualLeaveDays);
+    if (parsedAnnualLeaveDays === null) {
+      res.status(400).json({ error: "Annual leave days must be a whole number between 0 and 365" });
+      return;
+    }
 
     if (email) {
       const existing = await prisma.teamMember.findUnique({ where: { email } });
@@ -223,6 +244,7 @@ teamRouter.put(
       dateOfBirth: dateOfBirth ? new Date(dateOfBirth) : null,
       clientId: clientId || null,
     };
+    if (parsedAnnualLeaveDays !== undefined) data.annualLeaveDays = parsedAnnualLeaveDays;
 
     if (req.file) {
       data.image = await uploadToBunny(req.file.buffer, req.file.originalname, "Team");
@@ -232,6 +254,9 @@ teamRouter.put(
       where: { id },
       data,
     });
+    if (parsedAnnualLeaveDays !== undefined) {
+      await applyAnnualLeaveDays(id, parsedAnnualLeaveDays);
+    }
     res.json(sanitizeMember(member));
   }
 );
