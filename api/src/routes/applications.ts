@@ -3,6 +3,10 @@ import { prisma } from "../lib/prisma";
 import { requireAuth } from "../middleware/auth";
 import { deleteFromBunny } from "../lib/bunny";
 import { applicationSalaryFromNetEur } from "../services/salary.calculator.service";
+import { Resend } from "resend";
+import { CAREERS_SENDER, escapeHtml } from "../lib/email";
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 export const applicationsRouter = Router();
 
@@ -109,6 +113,76 @@ applicationsRouter.delete(
       where: { id: req.params.id as string },
     });
     res.json({ success: true });
+  }
+);
+
+// PROTECTED: Applications grouped by the job post they came from (client + role).
+// Applications not linked to a post (e.g. the post was deleted) are grouped by job title.
+applicationsRouter.get(
+  "/by-job",
+  requireAuth,
+  async (_req: Request, res: Response) => {
+    const blocked = await prisma.blockedApplicant.findMany({ select: { email: true } });
+    const applications = await prisma.jobApplication.findMany({
+      where: blocked.length
+        ? {
+            NOT: {
+              OR: blocked.map(({ email }) => ({
+                email: { equals: email, mode: "insensitive" as const },
+              })),
+            },
+          }
+        : {},
+      select: {
+        id: true,
+        fullName: true,
+        email: true,
+        salaryNetEur: true,
+        jobTitle: true,
+        onHold: true,
+        rejectionSentAt: true,
+        createdAt: true,
+        role: { select: { id: true, name: true } },
+        job: {
+          select: {
+            id: true,
+            title: true,
+            isActive: true,
+            postedDate: true,
+            technology: { select: { name: true } },
+            client: { select: { id: true, title: true } },
+          },
+        },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+
+    type Group = {
+      key: string;
+      job: (typeof applications)[number]["job"];
+      jobTitle: string;
+      applications: Omit<(typeof applications)[number], "job">[];
+    };
+    const groups = new Map<string, Group>();
+    for (const { job, ...app } of applications) {
+      const key = job ? `job:${job.id}` : `title:${app.jobTitle}`;
+      let group = groups.get(key);
+      if (!group) {
+        group = { key, job, jobTitle: job?.title ?? app.jobTitle, applications: [] };
+        groups.set(key, group);
+      }
+      group.applications.push(app);
+    }
+
+    // Active posts first, then older posts by posted date, unlinked titles last
+    const rank = (g: Group) => (g.job ? (g.job.isActive ? 0 : 1) : 2);
+    const sorted = [...groups.values()].sort(
+      (a, b) =>
+        rank(a) - rank(b) ||
+        (b.job?.postedDate.getTime() ?? 0) - (a.job?.postedDate.getTime() ?? 0) ||
+        a.jobTitle.localeCompare(b.jobTitle)
+    );
+    res.json(sorted);
   }
 );
 
@@ -301,5 +375,78 @@ applicationsRouter.delete(
     }
 
     res.json({ success: true });
+  }
+);
+
+// PROTECTED: Email the applicant that we won't move forward. Sent at most once.
+applicationsRouter.post(
+  "/:id/reject",
+  requireAuth,
+  async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    const application = await prisma.jobApplication.findUnique({
+      where: { id },
+      include: { job: { include: { technology: true } } },
+    });
+    if (!application) {
+      res.status(404).json({ error: "Application not found" });
+      return;
+    }
+
+    // Claim the send first so a double click can't email the applicant twice
+    const sentAt = new Date();
+    const claimed = await prisma.jobApplication.updateMany({
+      where: { id, rejectionSentAt: null },
+      data: { rejectionSentAt: sentAt },
+    });
+    if (claimed.count === 0) {
+      res.status(409).json({ error: "Rejection email was already sent" });
+      return;
+    }
+
+    const technology = application.job?.technology?.name;
+    const position = technology
+      ? `${application.jobTitle} (${technology})`
+      : application.jobTitle;
+    const firstName = application.fullName.trim().split(/\s+/)[0];
+
+    const { error } = await resend.emails.send({
+      from: CAREERS_SENDER,
+      to: application.email,
+      replyTo: "careers@softwareyard.co",
+      subject: `Your application for ${position}`,
+      html: `
+        <p>Hi ${escapeHtml(firstName)},</p>
+        <p>Thank you for your interest in the <strong>${escapeHtml(position)}</strong> position at SoftwareYard and for the time you put into your application.</p>
+        <p>After careful consideration, we have decided not to move forward with your application for this role.</p>
+        <p>We will keep your details on file and may reach out if a suitable opportunity comes up. We wish you the best of luck in your search.</p>
+        <p>Best regards,<br />SoftwareYard Team</p>
+      `,
+      text: [
+        `Hi ${firstName},`,
+        "",
+        `Thank you for your interest in the ${position} position at SoftwareYard and for the time you put into your application.`,
+        "",
+        "After careful consideration, we have decided not to move forward with your application for this role.",
+        "",
+        "We will keep your details on file and may reach out if a suitable opportunity comes up. We wish you the best of luck in your search.",
+        "",
+        "Best regards,",
+        "SoftwareYard Team",
+      ].join("\n"),
+    });
+
+    if (error) {
+      console.error("[applications] Rejection email failed:", error);
+      // Release the claim so it can be retried
+      await prisma.jobApplication.updateMany({
+        where: { id, rejectionSentAt: sentAt },
+        data: { rejectionSentAt: null },
+      });
+      res.status(502).json({ error: "Failed to send the rejection email" });
+      return;
+    }
+
+    res.json({ rejectionSentAt: sentAt });
   }
 );

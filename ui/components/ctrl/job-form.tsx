@@ -40,6 +40,7 @@ const jobSchema = z.object({
   type: z.string().min(1, "Type is required"),
   description: z.string().min(1, "Description is required"),
   technologyId: z.string().min(1, "Technology is required"),
+  clientId: z.string().optional(),
   requirements: z.array(z.object({ value: z.string() })),
   responsibilities: z.array(z.object({ value: z.string() })),
   goodToHave: z.array(z.object({ value: z.string() })),
@@ -61,8 +62,14 @@ interface JobData {
   responsibilities: string[];
   goodToHave: string[];
   technologyId: string | null;
+  clientId?: string | null;
   postedDate: string;
   isActive: boolean;
+}
+
+interface Client {
+  id: string;
+  title: string;
 }
 
 interface Technology {
@@ -84,6 +91,7 @@ interface JobFormProps {
     responsibilities: string[];
     goodToHave: string[];
     technologyId: string;
+    clientId: string | null;
     postedDate: string;
     isActive: boolean;
   }) => Promise<void>;
@@ -99,6 +107,7 @@ function toFormValues(job: JobData): JobFormValues {
     type: job.type,
     description: job.description,
     technologyId: job.technologyId ?? "",
+    clientId: job.clientId ?? "",
     requirements: job.requirements.map((v) => ({ value: v })),
     responsibilities: job.responsibilities.map((v) => ({ value: v })),
     goodToHave: (job.goodToHave ?? []).map((v) => ({ value: v })),
@@ -177,12 +186,16 @@ export function JobForm({
   const [technologies, setTechnologies] = useState<Technology[]>([]);
   const [newTechInput, setNewTechInput] = useState("");
   const [addingTech, setAddingTech] = useState(false);
+  const [clients, setClients] = useState<Client[]>([]);
 
   const loadTechnologies = () =>
     cmsApi<Technology[]>("/api/technologies").then(setTechnologies).catch(() => {});
 
   useEffect(() => {
-    if (open) loadTechnologies();
+    if (open) {
+      loadTechnologies();
+      cmsApi<Client[]>("/api/clients").then(setClients).catch(() => {});
+    }
   }, [open]);
 
   const handleAddTech = async () => {
@@ -217,6 +230,7 @@ export function JobForm({
       type: "Full-time",
       description: "",
       technologyId: "",
+      clientId: "",
       requirements: [{ value: "" }],
       responsibilities: [{ value: "" }],
       goodToHave: [{ value: "" }],
@@ -229,6 +243,7 @@ export function JobForm({
   const handleSubmit = async (values: JobFormValues) => {
     await onSubmit({
       ...values,
+      clientId: values.clientId || null,
       requirements: values.requirements
         .map((r) => r.value)
         .filter((v) => v.trim()),
@@ -402,6 +417,36 @@ export function JobForm({
                       </SelectContent>
                     </Select>
                   )}
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="clientId"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Client</FormLabel>
+                  <Select
+                    onValueChange={(v) => field.onChange(v === "none" ? "" : v)}
+                    value={field.value || "none"}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="No client" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="none">No client (internal)</SelectItem>
+                      {clients.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.title}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">Only visible in the CMS, never on the website.</p>
                   <FormMessage />
                 </FormItem>
               )}

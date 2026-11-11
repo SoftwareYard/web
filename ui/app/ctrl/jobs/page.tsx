@@ -39,6 +39,7 @@ interface Job {
   responsibilities: string[];
   goodToHave: string[];
   technologyId: string | null;
+  clientId: string | null;
   technology: { id: string; name: string } | null;
   postedDate: string;
   isActive: boolean;

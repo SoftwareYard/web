@@ -22,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowDown, ArrowUp, Ban, ChevronLeft, ChevronRight, Search, Sparkles } from "lucide-react";
+import { ArrowDown, ArrowUp, Ban, Layers, ChevronLeft, ChevronRight, Search, Sparkles } from "lucide-react";
 
 interface CandidateRole {
   id: string;
@@ -158,6 +158,10 @@ function ApplicationsList() {
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold">Job Applications</h1>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={() => router.push("/ctrl/applications/by-job")}>
+            <Layers className="w-4 h-4 mr-2" />
+            By job post
+          </Button>
           <Button variant="outline" onClick={() => router.push("/ctrl/applications/screening")}>
             <Sparkles className="w-4 h-4 mr-2" />
             AI Screening

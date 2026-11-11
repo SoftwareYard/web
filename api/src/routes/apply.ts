@@ -227,6 +227,7 @@ applyRouter.post(
           ...applicationSalaryFromNetEur(parseInt(salaryText, 10)),
           roleId,
           jobTitle,
+          jobId: job?.id ?? null,
           cvLink,
         },
       });

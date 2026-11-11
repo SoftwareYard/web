@@ -1,8 +1,15 @@
 import { Router, Request, Response } from "express";
 import { prisma } from "../lib/prisma";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, getAdminId } from "../middleware/auth";
 
 export const jobsRouter = Router();
+
+// The client a job is for is internal — strip it unless an admin is asking
+function forViewer<T extends { clientId?: string | null }>(req: Request, job: T) {
+  if (getAdminId(req)) return job;
+  const { clientId, ...rest } = job;
+  return rest;
+}
 
 // PUBLIC: Get all jobs (active only by default, all if ?all=true)
 jobsRouter.get("/", async (req: Request, res: Response) => {
@@ -12,7 +19,7 @@ jobsRouter.get("/", async (req: Request, res: Response) => {
     include: { technology: true },
     orderBy: { postedDate: "desc" },
   });
-  res.json(jobs);
+  res.json(jobs.map((job) => forViewer(req, job)));
 });
 
 // PUBLIC: Get single job by slug
@@ -26,7 +33,7 @@ jobsRouter.get("/by-slug/:slug", async (req: Request, res: Response) => {
     res.status(404).json({ error: "Not found" });
     return;
   }
-  res.json(job);
+  res.json(forViewer(req, job));
 });
 
 // PROTECTED: Get single job by id (for editing)
@@ -57,6 +64,7 @@ jobsRouter.post("/", requireAuth, async (req: Request, res: Response) => {
     benefits,
     goodToHave,
     technologyId,
+    clientId,
     postedDate,
     isActive,
   } = req.body;
@@ -77,6 +85,7 @@ jobsRouter.post("/", requireAuth, async (req: Request, res: Response) => {
       benefits: benefits || [],
       goodToHave: goodToHave || [],
       technologyId,
+      clientId: clientId || null,
       postedDate: new Date(postedDate),
       isActive: isActive ?? true,
     },
@@ -99,6 +108,7 @@ jobsRouter.put("/:id", requireAuth, async (req: Request, res: Response) => {
     benefits,
     goodToHave,
     technologyId,
+    clientId,
     postedDate,
     isActive,
   } = req.body;
@@ -120,6 +130,7 @@ jobsRouter.put("/:id", requireAuth, async (req: Request, res: Response) => {
       benefits,
       goodToHave,
       technologyId,
+      clientId: clientId === undefined ? undefined : clientId || null,
       postedDate: postedDate ? new Date(postedDate) : undefined,
       isActive,
     },
