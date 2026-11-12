@@ -77,6 +77,7 @@ interface VatLine {
 interface Receipt {
   id: string;
   imageUrl: string;
+  originalImageUrl: string | null;
   fileName: string;
   date: string; // ISO; only the YYYY-MM-DD part is meaningful
   dateSource: "scanned" | "upload" | "manual";
@@ -507,6 +508,16 @@ export default function ReceiptsPage() {
             </DialogHeader>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={preview.imageUrl} alt={preview.fileName} className="w-full rounded border" />
+            {preview.originalImageUrl && (
+              <a
+                href={preview.originalImageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-sm inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                Original photo (uncropped) <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
           </DialogContent>
         </Dialog>
       )}
@@ -623,10 +634,15 @@ function ReceiptDetails({ receipt: r }: { receipt: Receipt }) {
           <dd>{r.merchantVatNumber ?? "—"}</dd>
           <dt className="text-muted-foreground">Fiscal codes</dt>
           <dd className="break-all">{r.fiscalCodes.length ? r.fiscalCodes.join(", ") : "—"}</dd>
-          <dt className="text-muted-foreground">File</dt>
+          <dt className="text-muted-foreground">Photo</dt>
           <dd className="break-all">
-            <a href={r.imageUrl} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 text-primary hover:underline">
-              {r.fileName} <ExternalLink className="w-3 h-3" />
+            <a
+              href={r.originalImageUrl ?? r.imageUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-primary hover:underline"
+            >
+              {r.originalImageUrl ? "Original photo (uncropped)" : r.fileName} <ExternalLink className="w-3 h-3" />
             </a>
           </dd>
           <dt className="text-muted-foreground">Date</dt>

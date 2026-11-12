@@ -42,7 +42,8 @@ Fields:
 - fiscalCodes: the fiscal device / signature codes near the bottom (e.g. "AC415815989"), as printed.
 - vatTotal: total VAT ("ВКУПНО ДДВ").
 - vatBreakdown: one entry per VAT group with a non-zero amount: group letter as printed (А, Б, В, Г), its rate in percent, and the VAT amount.
-- items: every line item: name as printed, quantity, unit price, line amount, and VAT group letter.`;
+- items: every line item: name as printed, quantity, unit price, line amount, and VAT group letter.
+- receiptBox: the smallest rectangle around the whole paper receipt in the image, in pixels of the image as given (its size is stated in the message): left, top, right, bottom. Include the entire paper, from its top edge to its bottom edge, even where it's curled or partly in shadow. Null when the receipt fills the image or you can't tell where it is.`;
 
 const nullable = (type: string) => ({ type: [type, "null"] });
 
@@ -74,6 +75,22 @@ const SCHEMA = {
         additionalProperties: false,
       },
     },
+    receiptBox: {
+      anyOf: [
+        {
+          type: "object",
+          properties: {
+            left: { type: "number" },
+            top: { type: "number" },
+            right: { type: "number" },
+            bottom: { type: "number" },
+          },
+          required: ["left", "top", "right", "bottom"],
+          additionalProperties: false,
+        },
+        { type: "null" },
+      ],
+    },
     items: {
       type: "array",
       items: {
@@ -93,7 +110,7 @@ const SCHEMA = {
   required: [
     "date", "time", "total", "merchantName", "merchantAddress", "merchantTaxNumber",
     "merchantVatNumber", "paymentMethod", "category", "receiptNumber", "fiscalCodes",
-    "vatTotal", "vatBreakdown", "items",
+    "vatTotal", "vatBreakdown", "items", "receiptBox",
   ],
   additionalProperties: false,
 };
@@ -124,6 +141,47 @@ export type ReceiptScan = {
   items: ReceiptItem[];
 };
 
+type Box = { left: number; top: number; right: number; bottom: number };
+// Region of the (EXIF-rotated) original photo to keep
+export type CropArea = { left: number; top: number; width: number; height: number };
+
+// Margin around the box the model reports, as a share of the box size, so a slightly
+// off estimate doesn't cut the receipt's edge
+const CROP_MARGIN = 0.04;
+
+// Turn the model's box (in pixels of the image it saw) into a crop of the original photo.
+// Null when the box is unusable or the receipt already fills most of the photo.
+function toCropArea(
+  box: Box | null | undefined,
+  sent: { width: number; height: number },
+  original: { width: number; height: number }
+): CropArea | null {
+  if (!box) return null;
+  const { left, top, right, bottom } = box;
+  if (![left, top, right, bottom].every(Number.isFinite) || right <= left || bottom <= top) return null;
+
+  const scaleX = original.width / sent.width;
+  const scaleY = original.height / sent.height;
+  const marginX = (right - left) * CROP_MARGIN;
+  const marginY = (bottom - top) * CROP_MARGIN;
+  const x0 = Math.max(0, Math.floor((left - marginX) * scaleX));
+  const y0 = Math.max(0, Math.floor((top - marginY) * scaleY));
+  const x1 = Math.min(original.width, Math.ceil((right + marginX) * scaleX));
+  const y1 = Math.min(original.height, Math.ceil((bottom + marginY) * scaleY));
+  const width = x1 - x0;
+  const height = y1 - y0;
+
+  // Too small to be the receipt, or so large that cropping gains nothing
+  const share = (width * height) / (original.width * original.height);
+  if (width < 50 || height < 50 || share > 0.85) return null;
+  return { left: x0, top: y0, width, height };
+}
+
+// The original photo cut down to the receipt, as JPEG
+export async function cropReceiptImage(image: Buffer, area: CropArea): Promise<Buffer> {
+  return sharp(image).rotate().extract(area).jpeg({ quality: 90 }).toBuffer();
+}
+
 // A YYYY-MM-DD that is a real calendar day, not in the future and not absurdly old
 export function isPlausibleReceiptDate(value: unknown): value is string {
   if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
@@ -136,15 +194,26 @@ export function isPlausibleReceiptDate(value: unknown): value is string {
 const text = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
 const amount = (v: unknown) => (typeof v === "number" && Number.isFinite(v) && v >= 0 ? v : null);
 
-// `warning`: the scan looks internally inconsistent and should be checked by a person
-export async function scanReceipt(image: Buffer): Promise<ReceiptScan & { warning: string | null }> {
-  const jpeg = await sharp(image)
+// `warning`: the scan looks internally inconsistent and should be checked by a person.
+// `crop`: where the receipt is in the original photo, when there's background worth cutting away.
+export async function scanReceipt(
+  image: Buffer
+): Promise<ReceiptScan & { warning: string | null; crop: CropArea | null }> {
+  // Size after the phone's EXIF rotation is applied
+  const meta = await sharp(image).rotate().metadata();
+  const rotated90 = (meta.orientation ?? 1) >= 5;
+  const original = {
+    width: (rotated90 ? meta.height : meta.width) ?? 0,
+    height: (rotated90 ? meta.width : meta.height) ?? 0,
+  };
+
+  const { data: jpeg, info: sent } = await sharp(image)
     .rotate() // honour the phone's EXIF orientation
     .resize({ width: MAX_EDGE, height: MAX_EDGE, fit: "inside", withoutEnlargement: true })
     .jpeg({ quality: 85 })
-    .toBuffer();
+    .toBuffer({ resolveWithObject: true });
 
-  const r = await askForJson<ReceiptScan>({
+  const r = await askForJson<ReceiptScan & { receiptBox: Box | null }>({
     model: RECEIPT_MODEL,
     system: SYSTEM,
     schema: SCHEMA,
@@ -155,7 +224,7 @@ export async function scanReceipt(image: Buffer): Promise<ReceiptScan & { warnin
         type: "image",
         source: { type: "base64", media_type: "image/jpeg", data: jpeg.toString("base64") },
       },
-      { type: "text", text: "Read this receipt." },
+      { type: "text", text: `Read this receipt. The image is ${sent.width}×${sent.height} pixels.` },
     ],
   });
 
@@ -182,6 +251,7 @@ export async function scanReceipt(image: Buffer): Promise<ReceiptScan & { warnin
 
   return {
     warning,
+    crop: original.width && original.height ? toCropArea(r.receiptBox, sent, original) : null,
     date: isPlausibleReceiptDate(r.date) ? r.date : null,
     time: time && /^\d{2}:\d{2}$/.test(time) ? time : null,
     total,

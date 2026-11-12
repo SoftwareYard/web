@@ -5,8 +5,10 @@ import { prisma } from "../lib/prisma";
 import { uploadToBunny, deleteFromBunny } from "../lib/bunny";
 import { requireAuth, AuthRequest } from "../middleware/auth";
 import {
+  cropReceiptImage,
   isPlausibleReceiptDate,
   scanReceipt,
+  CropArea,
   PAYMENT_METHODS,
   RECEIPT_CATEGORIES,
 } from "../services/receipt-scanner.service";
@@ -42,6 +44,7 @@ async function scanFields(image: Buffer) {
     const missing = [!scan.date && "date", scan.total === null && "total"].filter(Boolean);
     return {
       scannedDate: scan.date,
+      crop: scan.crop,
       fields: {
         time: scan.time,
         total: scan.total,
@@ -66,10 +69,34 @@ async function scanFields(image: Buffer) {
     console.error("[receipts] Scan failed:", err);
     return {
       scannedDate: null,
+      crop: undefined, // unknown: leave the stored images as they are
       fields: { scanError: err instanceof Error ? err.message : "Scan failed" },
     };
   }
 }
+
+// Store the crop of the photo as the receipt image. Falls back to the original photo (no crop)
+// when there is nothing to cut away or the crop fails.
+async function storeCrop(
+  original: Buffer,
+  originalUrl: string,
+  fileName: string,
+  crop: CropArea | null
+): Promise<{ imageUrl: string; originalImageUrl: string | null }> {
+  if (!crop) return { imageUrl: originalUrl, originalImageUrl: null };
+  try {
+    const cropped = await cropReceiptImage(original, crop);
+    const name = `${fileName.replace(/\.[^.]+$/, "")}-receipt.jpg`;
+    const imageUrl = await uploadToBunny(cropped, name, "Receipts");
+    return { imageUrl, originalImageUrl: originalUrl };
+  } catch (err) {
+    console.error("[receipts] Crop failed, keeping the original photo:", err);
+    return { imageUrl: originalUrl, originalImageUrl: null };
+  }
+}
+
+const deleteImage = (url: string, id: string) =>
+  deleteFromBunny(url).catch((err) => console.error(`[receipts] Failed to delete image for ${id}:`, err));
 
 // An earlier receipt from the same merchant with the same number, date and total
 async function findDuplicate(r: {
@@ -115,9 +142,10 @@ receiptsRouter.post("/", upload.single("image"), async (req: AuthRequest, res: R
     return;
   }
 
-  let imageUrl: string;
+  // The photo as taken is stored first, so nothing is lost whatever happens next
+  let originalUrl: string;
   try {
-    imageUrl = await uploadToBunny(req.file.buffer, req.file.originalname, "Receipts");
+    originalUrl = await uploadToBunny(req.file.buffer, req.file.originalname, "Receipts");
   } catch (err) {
     console.error("[receipts] Upload failed:", err);
     res.status(502).json({ error: "Failed to upload the image" });
@@ -125,14 +153,15 @@ receiptsRouter.post("/", upload.single("image"), async (req: AuthRequest, res: R
   }
 
   // Unreadable date: file it under today so nothing is lost
-  const { scannedDate, fields } = await scanFields(req.file.buffer);
+  const { scannedDate, crop, fields } = await scanFields(req.file.buffer);
+  const images = await storeCrop(req.file.buffer, originalUrl, req.file.originalname, crop ?? null);
   const date = toDbDate(scannedDate ?? todayInSkopje());
   const duplicateOfId = await findDuplicate({ ...fields, date });
 
   const receipt = await prisma.receipt.create({
     data: {
       ...fields,
-      imageUrl,
+      ...images,
       fileName: req.file.originalname,
       date,
       dateSource: scannedDate ? "scanned" : "upload",
@@ -142,7 +171,7 @@ receiptsRouter.post("/", upload.single("image"), async (req: AuthRequest, res: R
   res.status(201).json(receipt);
 });
 
-// Read the stored image again, e.g. after a failed scan. A date set by hand is kept.
+// Read the original photo again, e.g. after a failed scan, and redo the crop. A date set by hand is kept.
 receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
   const receipt = await prisma.receipt.findUnique({ where: { id: String(req.params.id) } });
   if (!receipt) {
@@ -150,9 +179,10 @@ receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
     return;
   }
 
+  const originalUrl = receipt.originalImageUrl ?? receipt.imageUrl;
   let image: Buffer;
   try {
-    const download = await fetch(receipt.imageUrl);
+    const download = await fetch(originalUrl);
     if (!download.ok) throw new Error(`status ${download.status}`);
     image = Buffer.from(await download.arrayBuffer());
   } catch (err) {
@@ -162,7 +192,10 @@ receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
   }
 
   // A date set by hand wins; otherwise take the newly read one, or keep the current date
-  const { scannedDate, fields } = await scanFields(image);
+  const { scannedDate, crop, fields } = await scanFields(image);
+  // A failed scan says nothing about the crop, so the images stay as they are
+  const images =
+    crop === undefined ? {} : await storeCrop(image, originalUrl, receipt.fileName, crop);
   const useScanned = !!scannedDate && receipt.dateSource !== "manual";
   const date = useScanned ? toDbDate(scannedDate) : receipt.date;
   const duplicateOfId = await findDuplicate({ ...fields, id: receipt.id, date });
@@ -171,10 +204,16 @@ receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
     where: { id: receipt.id },
     data: {
       ...fields,
+      ...images,
       ...(useScanned ? { date, dateSource: "scanned" } : {}),
       duplicateOfId,
     },
   });
+
+  // The previous crop is replaced (never delete the original photo)
+  if ("imageUrl" in images && receipt.imageUrl !== originalUrl && receipt.imageUrl !== images.imageUrl) {
+    await deleteImage(receipt.imageUrl, receipt.id);
+  }
   res.json(updated);
 });
 
@@ -244,8 +283,7 @@ receiptsRouter.delete("/:id", async (req: AuthRequest, res: Response) => {
   await prisma.receipt.delete({ where: { id: receipt.id } });
   // Receipts that pointed at this one as their original are no longer duplicates of anything
   await prisma.receipt.updateMany({ where: { duplicateOfId: receipt.id }, data: { duplicateOfId: null } });
-  await deleteFromBunny(receipt.imageUrl).catch((err) =>
-    console.error(`[receipts] Failed to delete image for ${receipt.id}:`, err)
-  );
+  await deleteImage(receipt.imageUrl, receipt.id);
+  if (receipt.originalImageUrl) await deleteImage(receipt.originalImageUrl, receipt.id);
   res.json({ success: true });
 });

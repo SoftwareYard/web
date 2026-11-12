@@ -530,7 +530,10 @@ model CandidateAnalysisJob {
 // category and payment method can be corrected by hand.
 model Receipt {
   id                String    @id @default(cuid())
+  // Photo cut down to the receipt (or the original photo when no crop was needed)
   imageUrl          String    @map("image_url")
+  // The photo as taken, kept when imageUrl is a crop of it
+  originalImageUrl  String?   @map("original_image_url")
   fileName          String    @map("file_name")
   // Day of purchase; drives the year/month grouping
   date              DateTime  @db.Date
