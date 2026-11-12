@@ -310,7 +310,7 @@ receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
 
 // Correct what the scan got wrong
 receiptsRouter.patch("/:id", async (req: AuthRequest, res: Response) => {
-  const { date, total, merchantName, category, paymentMethod } = req.body ?? {};
+  const { date, total, merchantName, receiptNumber, category, paymentMethod } = req.body ?? {};
   const data: Prisma.ReceiptUpdateInput = {};
 
   if (date !== undefined) {
@@ -339,6 +339,11 @@ receiptsRouter.patch("/:id", async (req: AuthRequest, res: Response) => {
     data.merchantName = typeof merchantName === "string" && merchantName.trim() ? merchantName.trim() : null;
   }
 
+  if (receiptNumber !== undefined) {
+    data.receiptNumber =
+      typeof receiptNumber === "string" && receiptNumber.trim() ? receiptNumber.trim().replace(/^#/, "") : null;
+  }
+
   if (category !== undefined) {
     if (!RECEIPT_CATEGORIES.includes(category)) {
       res.status(400).json({ error: `Category must be one of: ${RECEIPT_CATEGORIES.join(", ")}` });
@@ -364,7 +369,13 @@ receiptsRouter.patch("/:id", async (req: AuthRequest, res: Response) => {
   // Saving a correction means a person has looked at it, so the scan's note is dismissed
   if (Object.keys(data).length) data.scanError = null;
 
-  const receipt = await prisma.receipt.update({ where: { id: exists.id }, data });
+  let receipt = await prisma.receipt.update({ where: { id: exists.id }, data });
+
+  // Number, date and total identify a duplicate, so check again after they change
+  const duplicateOfId = await findDuplicate(receipt);
+  if (duplicateOfId !== receipt.duplicateOfId) {
+    receipt = await prisma.receipt.update({ where: { id: receipt.id }, data: { duplicateOfId } });
+  }
   res.json(receipt);
 });
 

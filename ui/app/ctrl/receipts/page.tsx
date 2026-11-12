@@ -5,6 +5,7 @@ import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "rea
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { cmsApi } from "@/lib/cms-api";
 import { ScanReceiptButton } from "@/components/ctrl/scan-receipt-button";
+import { exportReceiptsToExcel } from "@/lib/receipt-export";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -47,6 +48,7 @@ import {
   ChevronDown,
   ChevronRight,
   Copy,
+  Download,
   ExternalLink,
   ImageOff,
   Loader2,
@@ -215,6 +217,15 @@ export default function ReceiptsPage() {
         .filter((m) => m.receipts.length > 0)
     : months;
 
+  // Exports what's listed: the selected year, or only the flagged receipts when that filter is on
+  const exportExcel = () => {
+    const list = shownMonths.flatMap((m) => m.receipts);
+    exportReceiptsToExcel(list, `receipts-${year}${onlyToCheck ? "-to-check" : ""}.xlsx`, {
+      category: CATEGORY_LABELS,
+      payment: PAYMENT_LABELS,
+    });
+  };
+
   const toggle = (id: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
@@ -366,6 +377,17 @@ export default function ReceiptsPage() {
                 Upload photos
               </>
             )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={exportExcel}
+            disabled={!shownMonths.length}
+            aria-label="Export to Excel"
+            title={onlyToCheck ? `Export the receipts to check (${year}) to Excel` : `Export ${year} to Excel`}
+          >
+            <Download className="w-4 h-4" />
           </Button>
           <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setManualOpen(true)}>
             <NotebookPen className="w-4 h-4 mr-2" />
@@ -761,6 +783,7 @@ function EditDialog({
   const [date, setDate] = useState(day(receipt));
   const [total, setTotal] = useState(receipt.total !== null ? String(receipt.total) : "");
   const [merchantName, setMerchantName] = useState(receipt.merchantName ?? "");
+  const [receiptNumber, setReceiptNumber] = useState(receipt.receiptNumber ?? "");
   const [category, setCategory] = useState<Category>(receipt.category ?? "other");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(receipt.paymentMethod ?? "unknown");
   const [saving, setSaving] = useState(false);
@@ -779,6 +802,7 @@ function EditDialog({
           ...(date !== day(receipt) ? { date } : {}),
           total: amount,
           merchantName,
+          receiptNumber,
           category,
           paymentMethod,
         }),
@@ -823,6 +847,10 @@ function EditDialog({
             <div className="space-y-1">
               <Label htmlFor="receipt-merchant">Merchant</Label>
               <Input id="receipt-merchant" value={merchantName} onChange={(e) => setMerchantName(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="receipt-number">Receipt no.</Label>
+              <Input id="receipt-number" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} />
             </div>
             <div className="space-y-1">
               <Label>Category</Label>
