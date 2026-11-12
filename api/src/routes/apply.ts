@@ -23,14 +23,96 @@ const upload = multer({
   },
 });
 
-async function notifyNewApplication(a: {
+type ApplicationNotification = {
   applicationId: string | null;
   position: string;
   fullName: string;
   email: string;
+  phone: string;
   expectedSalary: string;
+  linkedin?: string;
+  github?: string;
+  coverLetter?: string;
   cvLink: string;
-}) {
+  cvFile: Express.Multer.File;
+};
+
+// Recruitment team email; links the CV, or attaches it only when the upload failed
+// (attachments push mail into spam)
+async function sendTeamEmail(a: ApplicationNotification) {
+  const cvHtml = a.cvLink
+    ? `<a href="${escapeHtml(a.cvLink)}">${escapeHtml(a.cvFile.originalname)}</a>`
+    : "Attached";
+
+  const { error } = await resend.emails.send({
+    from: WEBSITE_SENDER,
+    to: "careers@softwareyard.co",
+    replyTo: a.email,
+    subject: `${a.position} - ${a.fullName}`,
+    html: `
+      <h2>New Job Application</h2>
+      <p><strong>Position:</strong> ${escapeHtml(a.position)}</p>
+      <p><strong>Name:</strong> ${escapeHtml(a.fullName)}</p>
+      <p><strong>Email:</strong> ${escapeHtml(a.email)}</p>
+      <p><strong>Phone:</strong> ${escapeHtml(a.phone)}</p>
+      <p><strong>Expected Salary:</strong> ${escapeHtml(a.expectedSalary)}</p>
+      <p><strong>LinkedIn:</strong> ${escapeHtml(a.linkedin || "N/A")}</p>
+      <p><strong>GitHub:</strong> ${escapeHtml(a.github || "N/A")}</p>
+      <p><strong>CV:</strong> ${cvHtml}</p>
+      <hr />
+      <p><strong>Cover Letter:</strong></p>
+      <p>${escapeMultiline(a.coverLetter || "N/A")}</p>
+    `,
+    text: [
+      "New Job Application",
+      "",
+      `Position: ${a.position}`,
+      `Name: ${a.fullName}`,
+      `Email: ${a.email}`,
+      `Phone: ${a.phone}`,
+      `Expected Salary: ${a.expectedSalary}`,
+      `LinkedIn: ${a.linkedin || "N/A"}`,
+      `GitHub: ${a.github || "N/A"}`,
+      `CV: ${a.cvLink || "Attached"}`,
+      "",
+      "Cover Letter:",
+      a.coverLetter || "N/A",
+    ].join("\n"),
+    attachments: a.cvLink
+      ? undefined
+      : [{ filename: a.cvFile.originalname, content: a.cvFile.buffer }],
+  });
+  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
+}
+
+async function sendApplicantConfirmation(a: ApplicationNotification) {
+  const firstName = String(a.fullName).trim().split(/\s+/)[0];
+  const { error } = await resend.emails.send({
+    from: CAREERS_SENDER,
+    to: a.email,
+    replyTo: "careers@softwareyard.co",
+    subject: `Thank you for applying for ${a.position}`,
+    html: `
+      <p>Hi ${escapeHtml(firstName)},</p>
+      <p>Thank you for applying for the <strong>${escapeHtml(a.position)}</strong> position at SoftwareYard.</p>
+      <p>We have received your application and our team will review it carefully. If your profile is a good fit for the role, we will get back to you with the next steps.</p>
+      <p>Best regards,<br />SoftwareYard Team</p>
+    `,
+    text: [
+      `Hi ${firstName},`,
+      "",
+      `Thank you for applying for the ${a.position} position at SoftwareYard.`,
+      "",
+      "We have received your application and our team will review it carefully. If your profile is a good fit for the role, we will get back to you with the next steps.",
+      "",
+      "Best regards,",
+      "SoftwareYard Team",
+    ].join("\n"),
+  });
+  if (error) throw new Error(`Resend error: ${JSON.stringify(error)}`);
+}
+
+async function notifyNewApplication(a: ApplicationNotification) {
   const earlier = await prisma.jobApplication.count({
     where: {
       email: { equals: String(a.email).trim(), mode: "insensitive" },
@@ -79,7 +161,7 @@ applyRouter.post(
       return;
     }
 
-    // Checked before any email goes out, so a bad value can't leave an emailed but unsaved application
+    // Checked before anything is uploaded or saved
     const salaryText = String(expectedSalary).trim();
     if (!/^\d+$/.test(salaryText) || parseInt(salaryText, 10) <= 0) {
       res.status(400).json({ error: "Expected salary must be a number greater than 0" });
@@ -109,8 +191,8 @@ applyRouter.post(
     const technology = job?.technology?.name;
     const position = technology ? `${jobTitle} (${technology})` : jobTitle;
 
-    // Map job title to role and upload CV first, so the email can link to it
-    // instead of attaching the PDF (attachments push mail into spam)
+    // Map job title to role and upload the CV before saving, so the application
+    // (and the emails) can link to it
     let roleId: string | null = null;
     let cvLink = "";
     try {
@@ -131,121 +213,75 @@ applyRouter.post(
       console.error("Failed to map job title to role:", roleError);
     }
 
-    const cvHtml = cvLink
-      ? `<a href="${escapeHtml(cvLink)}">${escapeHtml(req.file.originalname)}</a>`
-      : "Attached";
-
-    const { error } = await resend.emails.send({
-      from: WEBSITE_SENDER,
-      to: "careers@softwareyard.co",
-      replyTo: email,
-      subject: `${position} - ${fullName}`,
-      html: `
-        <h2>New Job Application</h2>
-        <p><strong>Position:</strong> ${escapeHtml(position)}</p>
-        <p><strong>Name:</strong> ${escapeHtml(fullName)}</p>
-        <p><strong>Email:</strong> ${escapeHtml(email)}</p>
-        <p><strong>Phone:</strong> ${escapeHtml(phone)}</p>
-        <p><strong>Expected Salary:</strong> ${escapeHtml(expectedSalary)}</p>
-        <p><strong>LinkedIn:</strong> ${escapeHtml(linkedin || "N/A")}</p>
-        <p><strong>GitHub:</strong> ${escapeHtml(github || "N/A")}</p>
-        <p><strong>CV:</strong> ${cvHtml}</p>
-        <hr />
-        <p><strong>Cover Letter:</strong></p>
-        <p>${escapeMultiline(coverLetter || "N/A")}</p>
-      `,
-      text: [
-        "New Job Application",
-        "",
-        `Position: ${position}`,
-        `Name: ${fullName}`,
-        `Email: ${email}`,
-        `Phone: ${phone}`,
-        `Expected Salary: ${expectedSalary}`,
-        `LinkedIn: ${linkedin || "N/A"}`,
-        `GitHub: ${github || "N/A"}`,
-        `CV: ${cvLink || "Attached"}`,
-        "",
-        "Cover Letter:",
-        coverLetter || "N/A",
-      ].join("\n"),
-      // Only fall back to attaching the CV when the upload failed
-      attachments: cvLink
-        ? undefined
-        : [
-            {
-              filename: req.file.originalname,
-              content: req.file.buffer,
-            },
-          ],
-    });
-
-    if (error) {
-      console.error("Resend error:", error);
-      res.status(500).json({ error: "Failed to send application" });
-      return;
-    }
-
-    // Confirmation to the applicant — a failure here must not fail the application
-    const firstName = String(fullName).trim().split(/\s+/)[0];
-    const { error: confirmationError } = await resend.emails.send({
-      from: CAREERS_SENDER,
-      to: email,
-      replyTo: "careers@softwareyard.co",
-      subject: `Thank you for applying for ${position}`,
-      html: `
-        <p>Hi ${escapeHtml(firstName)},</p>
-        <p>Thank you for applying for the <strong>${escapeHtml(position)}</strong> position at SoftwareYard.</p>
-        <p>We have received your application and our team will review it carefully. If your profile is a good fit for the role, we will get back to you with the next steps.</p>
-        <p>Best regards,<br />SoftwareYard Team</p>
-      `,
-      text: [
-        `Hi ${firstName},`,
-        "",
-        `Thank you for applying for the ${position} position at SoftwareYard.`,
-        "",
-        "We have received your application and our team will review it carefully. If your profile is a good fit for the role, we will get back to you with the next steps.",
-        "",
-        "Best regards,",
-        "SoftwareYard Team",
-      ].join("\n"),
-    });
-    if (confirmationError) {
-      console.error("Resend confirmation email error:", confirmationError);
-    }
-
+    // Save first so the application is never lost to an email or Slack outage.
+    // The application and its CV analysis job are written together; the AI Operations
+    // Copilot worker picks up pending jobs. No CV link (upload failed) means nothing to analyze.
     let applicationId: string | null = null;
     try {
       if (!roleId) throw new Error(`No role for job title "${jobTitle}"`);
 
+      const created = await prisma.$transaction(async (tx) => {
+        const createdApplication = await tx.jobApplication.create({
+          data: {
+            fullName,
+            phone,
+            email,
+            ...applicationSalaryFromNetEur(parseInt(salaryText, 10)),
+            roleId,
+            jobTitle,
+            jobId: job?.id ?? null,
+            cvLink,
+          },
+        });
 
-      const created = await prisma.jobApplication.create({
-        data: {
-          fullName,
-          phone,
-          email,
-          ...applicationSalaryFromNetEur(parseInt(salaryText, 10)),
-          roleId,
-          jobTitle,
-          jobId: job?.id ?? null,
-          cvLink,
-        },
+        if (cvLink) {
+          await tx.candidateAnalysisJob.create({
+            data: { applicationId: createdApplication.id },
+          });
+        }
+
+        return createdApplication;
       });
       applicationId = created.id;
     } catch (dbError) {
       console.error("Failed to save application:", dbError);
     }
 
-    // Heads-up in sy_info; never delays or fails the application
-    notifyNewApplication({
+    const notification = {
       applicationId,
       position,
       fullName,
       email,
+      phone,
       expectedSalary: salaryText,
+      linkedin,
+      github,
+      coverLetter,
       cvLink,
-    }).catch((err) => console.error("[apply] Failed to send Slack notification:", err));
+      cvFile: req.file,
+    };
 
-    res.json({ success: true });
+    if (applicationId) {
+      res.json({ success: true });
+      // Notifications run after the response; none of them can fail the application
+      sendTeamEmail(notification).catch((err) => console.error("[apply] Team email failed:", err));
+    } else {
+      // Not saved: the team email is the only record left, so it must go out before we report success
+      try {
+        await sendTeamEmail(notification);
+      } catch (err) {
+        console.error("[apply] Application not saved and team email failed:", err);
+        res.status(500).json({ error: "Failed to send application" });
+        return;
+      }
+      res.json({ success: true });
+    }
+
+    sendApplicantConfirmation(notification).catch((err) =>
+      console.error("[apply] Confirmation email failed:", err)
+    );
+    notifyNewApplication(notification).catch((err) =>
+      console.error("[apply] Failed to send Slack notification:", err)
+    );
   }
 );

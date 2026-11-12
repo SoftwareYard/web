@@ -1,6 +1,7 @@
 "use client";
 
 import { CmsShell } from "@/components/ctrl/cms-shell";
+import { ScanReceiptButton } from "@/components/ctrl/scan-receipt-button";
 import {
   Card,
   CardHeader,
@@ -202,7 +203,11 @@ export default function CtrlDashboard() {
 
   return (
     <CmsShell>
-      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="flex items-center justify-between gap-4 mb-6 flex-wrap">
+        <h1 className="text-2xl font-bold">Dashboard</h1>
+        {/* Full width on phones so it's the first thing under the thumb */}
+        <ScanReceiptButton className="w-full sm:w-auto h-14 sm:h-11 text-base" />
+      </div>
       <div className="grid md:grid-cols-2 gap-6">
         <Link href="/ctrl/team">
           <Card className="hover:border-foreground/20 transition-colors cursor-pointer">

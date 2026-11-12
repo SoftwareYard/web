@@ -33,7 +33,7 @@ function reportAiProblem(problem: string) {
   aiStatus.since ??= new Date();
   if (!isNew) return;
   sendSlackMessage(
-    `:warning: CV scanning stopped: ${problem}. Top up or fix it at https://console.anthropic.com, then run the scan again.`
+    `:warning: AI scanning (CVs, receipts) stopped: ${problem}. Top up or fix it at https://console.anthropic.com, then run the scan again.`
   ).catch((err) => console.error("[ai] Failed to send Slack alert:", err));
 }
 
@@ -44,41 +44,59 @@ export async function downloadCv(url: string): Promise<Buffer> {
 }
 
 // One call that returns JSON matching `schema`, reading the CV PDF alongside `text`
-export async function askAboutCv<T>(opts: {
+export function askAboutCv<T>(opts: {
   system: string;
   schema: Record<string, unknown>;
   pdf: Buffer;
   text: string;
 }): Promise<T> {
+  return askForJson<T>({
+    model: CV_MODEL,
+    system: opts.system,
+    schema: opts.schema,
+    subject: "CV",
+    content: [
+      {
+        type: "document",
+        source: {
+          type: "base64",
+          media_type: "application/pdf",
+          data: opts.pdf.toString("base64"),
+        },
+      },
+      { type: "text", text: opts.text },
+    ],
+  });
+}
+
+// One call that returns JSON matching `schema` for the given user content
+export async function askForJson<T>(opts: {
+  model: string;
+  system: string;
+  schema: Record<string, unknown>;
+  content: Anthropic.Beta.BetaContentBlockParam[];
+  // What is being read, for error messages ("CV", "receipt")
+  subject: string;
+  effort?: "low" | "medium" | "high";
+}): Promise<T> {
+  // Server-side refusal fallbacks exist for Opus/Sonnet, not Haiku
+  const fallback = opts.model.startsWith("claude-haiku")
+    ? {}
+    : { betas: ["server-side-fallback-2026-07-01"], fallbacks: "default" as const };
+
   let response: Anthropic.Beta.BetaMessage;
   try {
     response = await anthropic.beta.messages.create({
-      model: CV_MODEL,
+      model: opts.model,
       max_tokens: 16000,
-      betas: ["server-side-fallback-2026-07-01"],
-      fallbacks: "default",
+      ...fallback,
       output_config: {
-        effort: "low",
+        effort: opts.effort ?? "low",
         format: { type: "json_schema", schema: opts.schema },
       },
-      // System prompt is identical for every CV, so it's cached across a run
+      // System prompt is identical for every call of a kind, so it's cached across a run
       system: [{ type: "text", text: opts.system, cache_control: { type: "ephemeral" } }],
-      messages: [
-        {
-          role: "user",
-          content: [
-            {
-              type: "document",
-              source: {
-                type: "base64",
-                media_type: "application/pdf",
-                data: opts.pdf.toString("base64"),
-              },
-            },
-            { type: "text", text: opts.text },
-          ],
-        },
-      ],
+      messages: [{ role: "user", content: opts.content }],
     });
   } catch (err) {
     const unavailable = toAiUnavailable(err);
@@ -92,7 +110,7 @@ export async function askAboutCv<T>(opts: {
   aiStatus.since = null;
 
   if (response.stop_reason === "refusal") {
-    throw new Error("The model declined to read this CV");
+    throw new Error(`The model declined to read this ${opts.subject}`);
   }
   if (response.stop_reason === "max_tokens") {
     throw new Error("The model's answer was cut off");

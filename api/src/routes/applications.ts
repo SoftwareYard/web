@@ -416,22 +416,22 @@ applicationsRouter.post(
       replyTo: "careers@softwareyard.co",
       subject: `Your application for ${position}`,
       html: `
-        <p>Hi ${escapeHtml(firstName)},</p>
-        <p>Thank you for your interest in the <strong>${escapeHtml(position)}</strong> position at SoftwareYard and for the time you put into your application.</p>
-        <p>After careful consideration, we have decided not to move forward with your application for this role.</p>
-        <p>We will keep your details on file and may reach out if a suitable opportunity comes up. We wish you the best of luck in your search.</p>
-        <p>Best regards,<br />SoftwareYard Team</p>
+        <p>Dear ${escapeHtml(firstName)},</p>
+        <p>Thank you for your time and interest in the <strong>${escapeHtml(position)}</strong> position at SoftwareYard.</p>
+        <p>After careful consideration, we have decided to move forward with other candidates whose profiles more closely match the current requirements of the role.</p>
+        <p>We truly appreciate the effort you put into your application and wish you all the best in your future career.</p>
+        <p>Kind regards,<br />SoftwareYard Team</p>
       `,
       text: [
-        `Hi ${firstName},`,
+        `Dear ${firstName},`,
         "",
-        `Thank you for your interest in the ${position} position at SoftwareYard and for the time you put into your application.`,
+        `Thank you for your time and interest in the ${position} position at SoftwareYard.`,
         "",
-        "After careful consideration, we have decided not to move forward with your application for this role.",
+        "After careful consideration, we have decided to move forward with other candidates whose profiles more closely match the current requirements of the role.",
         "",
-        "We will keep your details on file and may reach out if a suitable opportunity comes up. We wish you the best of luck in your search.",
+        "We truly appreciate the effort you put into your application and wish you all the best in your future career.",
         "",
-        "Best regards,",
+        "Kind regards,",
         "SoftwareYard Team",
       ].join("\n"),
     });

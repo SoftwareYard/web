@@ -390,6 +390,7 @@ model JobApplication {
 
   screeningResults CvScreeningResult[]
   profile          CandidateProfile?
+  analysisJob      CandidateAnalysisJob?
 
   @@map("job_applications")
 }
@@ -464,17 +465,17 @@ model CvScreening {
 }
 
 model CvScreeningResult {
-  id               String         @id @default(cuid())
-  screeningId      String         @map("screening_id")
-  screening        CvScreening    @relation(fields: [screeningId], references: [id], onDelete: Cascade)
-  applicationId    String         @map("application_id")
-  application      JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+  id              String         @id @default(cuid())
+  screeningId     String         @map("screening_id")
+  screening       CvScreening    @relation(fields: [screeningId], references: [id], onDelete: Cascade)
+  applicationId   String         @map("application_id")
+  application     JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade)
   // match | no_match | unclear | error
-  verdict          String
-  yearsExperience  Float?         @map("years_experience")
-  skills           String[]       @default([])
-  reason           String
-  createdAt        DateTime       @default(now()) @map("created_at")
+  verdict         String
+  yearsExperience Float?         @map("years_experience")
+  skills          String[]       @default([])
+  reason          String
+  createdAt       DateTime       @default(now()) @map("created_at")
 
   @@unique([screeningId, applicationId])
   @@index([screeningId, verdict])
@@ -501,4 +502,69 @@ model CandidateProfile {
 
   @@index([status])
   @@map("candidate_profiles")
+}
+
+// Queue of CV analyses for the AI Operations Copilot (one job per application).
+// status: pending | processing | completed | failed (CHECK constraint in the migration)
+model CandidateAnalysisJob {
+  id            String         @id @default(cuid())
+  applicationId String         @unique @map("application_id")
+  application   JobApplication @relation(fields: [applicationId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  status        String         @default("pending")
+  attempts      Int            @default(0)
+  maxAttempts   Int            @default(3) @map("max_attempts")
+  lastError     String?        @map("last_error")
+  nextAttemptAt DateTime       @default(now()) @map("next_attempt_at") @db.Timestamptz
+  lockedAt      DateTime?      @map("locked_at") @db.Timestamptz
+  createdAt     DateTime       @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime       @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  completedAt   DateTime?      @map("completed_at") @db.Timestamptz
+
+  // candidate_analysis_jobs_pending_idx (next_attempt_at, created_at) WHERE status = 'pending'
+  // lives only in the migration SQL: Prisma 7.3 can't express partial indexes and ignores them
+  @@map("candidate_analysis_jobs")
+}
+
+// Photographed fiscal receipts (фискална сметка). Everything below the image is read from it
+// by Claude (Haiku); when the date can't be read the upload date is used. Date, total, merchant,
+// category and payment method can be corrected by hand.
+model Receipt {
+  id                String    @id @default(cuid())
+  imageUrl          String    @map("image_url")
+  fileName          String    @map("file_name")
+  // Day of purchase; drives the year/month grouping
+  date              DateTime  @db.Date
+  // scanned (read from the receipt) | upload (fallback: day it was uploaded) | manual (edited)
+  dateSource        String    @default("upload") @map("date_source")
+  // "HH:MM" as printed after ЧАС
+  time              String?
+  // Total in MKD (ВКУПЕН ПРОМЕТ)
+  total             Float?
+  merchantName      String?   @map("merchant_name")
+  merchantAddress   String?   @map("merchant_address")
+  // ДАН. БРОЈ (tax number) and ДДВ БРОЈ (VAT number)
+  merchantTaxNumber String?   @map("merchant_tax_number")
+  merchantVatNumber String?   @map("merchant_vat_number")
+  // cash | card | mixed | unknown
+  paymentMethod     String?   @map("payment_method")
+  // restaurant | groceries | fuel | office | transport | utilities | other (inferred, not printed)
+  category          String?
+  // Receipt number as printed (e.g. "0023") and the fiscal device / signature codes
+  receiptNumber     String?   @map("receipt_number")
+  fiscalCodes       String[]  @default([]) @map("fiscal_codes")
+  vatTotal          Float?    @map("vat_total")
+  // [{ group: "А", ratePercent: 18, vat: 216.61 }]
+  vatBreakdown      Json?     @map("vat_breakdown")
+  // [{ name, quantity, unitPrice, amount, vatGroup }]
+  items             Json?
+  // Earlier receipt with the same merchant, number, date and total (likely uploaded twice)
+  duplicateOfId     String?   @map("duplicate_of_id")
+  scanError         String?   @map("scan_error")
+  scannedAt         DateTime? @map("scanned_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
+  updatedAt         DateTime  @updatedAt @map("updated_at")
+
+  @@index([date])
+  @@index([merchantTaxNumber, receiptNumber])
+  @@map("receipts")
 }
