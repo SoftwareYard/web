@@ -171,6 +171,86 @@ receiptsRouter.post("/", upload.single("image"), async (req: AuthRequest, res: R
   res.status(201).json(receipt);
 });
 
+const optionalText = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+// Parse an amount typed by hand ("2780", "2 780,50"); undefined when it isn't a valid amount
+function parseAmount(v: unknown): number | null | undefined {
+  if (v === undefined || v === null || String(v).trim() === "") return null;
+  const n = Number(String(v).replace(/\s/g, "").replace(",", "."));
+  return Number.isFinite(n) && n >= 0 ? n : undefined;
+}
+
+// Enter a receipt by hand, for ones too damaged or faded to scan. The photo is optional and
+// is stored as is, without scanning.
+receiptsRouter.post("/manual", upload.single("image"), async (req: AuthRequest, res: Response) => {
+  const body = req.body ?? {};
+
+  if (!isPlausibleReceiptDate(body.date)) {
+    res.status(400).json({ error: "Date must be a valid YYYY-MM-DD that isn't in the future" });
+    return;
+  }
+  const total = parseAmount(body.total);
+  if (total === undefined || total === null) {
+    res.status(400).json({ error: "Total is required and must be a number of 0 or more" });
+    return;
+  }
+  const vatTotal = parseAmount(body.vatTotal);
+  if (vatTotal === undefined) {
+    res.status(400).json({ error: "VAT must be a number of 0 or more" });
+    return;
+  }
+  const time = optionalText(body.time);
+  if (time && !/^\d{2}:\d{2}$/.test(time)) {
+    res.status(400).json({ error: "Time must be HH:MM" });
+    return;
+  }
+  const category = optionalText(body.category) ?? "other";
+  if (!(RECEIPT_CATEGORIES as readonly string[]).includes(category)) {
+    res.status(400).json({ error: `Category must be one of: ${RECEIPT_CATEGORIES.join(", ")}` });
+    return;
+  }
+  const paymentMethod = optionalText(body.paymentMethod) ?? "unknown";
+  if (!(PAYMENT_METHODS as readonly string[]).includes(paymentMethod)) {
+    res.status(400).json({ error: `Payment method must be one of: ${PAYMENT_METHODS.join(", ")}` });
+    return;
+  }
+
+  let imageUrl: string | null = null;
+  if (req.file) {
+    try {
+      imageUrl = await uploadToBunny(req.file.buffer, req.file.originalname, "Receipts");
+    } catch (err) {
+      console.error("[receipts] Upload failed:", err);
+      res.status(502).json({ error: "Failed to upload the image" });
+      return;
+    }
+  }
+
+  const fields = {
+    date: toDbDate(body.date),
+    time,
+    total,
+    vatTotal,
+    merchantName: optionalText(body.merchantName),
+    merchantTaxNumber: optionalText(body.merchantTaxNumber)?.replace(/\s/g, "") ?? null,
+    receiptNumber: optionalText(body.receiptNumber)?.replace(/^#/, "") ?? null,
+    category,
+    paymentMethod,
+  };
+  const duplicateOfId = await findDuplicate(fields);
+
+  const receipt = await prisma.receipt.create({
+    data: {
+      ...fields,
+      imageUrl,
+      fileName: req.file?.originalname ?? null,
+      dateSource: "manual",
+      duplicateOfId,
+    },
+  });
+  res.status(201).json(receipt);
+});
+
 // Read the original photo again, e.g. after a failed scan, and redo the crop. A date set by hand is kept.
 receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
   const receipt = await prisma.receipt.findUnique({ where: { id: String(req.params.id) } });
@@ -180,6 +260,10 @@ receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
   }
 
   const originalUrl = receipt.originalImageUrl ?? receipt.imageUrl;
+  if (!originalUrl) {
+    res.status(400).json({ error: "This receipt was entered by hand and has no photo to scan" });
+    return;
+  }
   let image: Buffer;
   try {
     const download = await fetch(originalUrl);
@@ -195,7 +279,9 @@ receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
   const { scannedDate, crop, fields } = await scanFields(image);
   // A failed scan says nothing about the crop, so the images stay as they are
   const images =
-    crop === undefined ? {} : await storeCrop(image, originalUrl, receipt.fileName, crop);
+    crop === undefined
+      ? {}
+      : await storeCrop(image, originalUrl, receipt.fileName ?? "receipt.jpg", crop);
   const useScanned = !!scannedDate && receipt.dateSource !== "manual";
   const date = useScanned ? toDbDate(scannedDate) : receipt.date;
   const duplicateOfId = await findDuplicate({ ...fields, id: receipt.id, date });
@@ -211,7 +297,12 @@ receiptsRouter.post("/:id/rescan", async (req: AuthRequest, res: Response) => {
   });
 
   // The previous crop is replaced (never delete the original photo)
-  if ("imageUrl" in images && receipt.imageUrl !== originalUrl && receipt.imageUrl !== images.imageUrl) {
+  if (
+    "imageUrl" in images &&
+    receipt.imageUrl &&
+    receipt.imageUrl !== originalUrl &&
+    receipt.imageUrl !== images.imageUrl
+  ) {
     await deleteImage(receipt.imageUrl, receipt.id);
   }
   res.json(updated);
@@ -270,6 +361,9 @@ receiptsRouter.patch("/:id", async (req: AuthRequest, res: Response) => {
     return;
   }
 
+  // Saving a correction means a person has looked at it, so the scan's note is dismissed
+  if (Object.keys(data).length) data.scanError = null;
+
   const receipt = await prisma.receipt.update({ where: { id: exists.id }, data });
   res.json(receipt);
 });
@@ -283,7 +377,7 @@ receiptsRouter.delete("/:id", async (req: AuthRequest, res: Response) => {
   await prisma.receipt.delete({ where: { id: receipt.id } });
   // Receipts that pointed at this one as their original are no longer duplicates of anything
   await prisma.receipt.updateMany({ where: { duplicateOfId: receipt.id }, data: { duplicateOfId: null } });
-  await deleteImage(receipt.imageUrl, receipt.id);
+  if (receipt.imageUrl) await deleteImage(receipt.imageUrl, receipt.id);
   if (receipt.originalImageUrl) await deleteImage(receipt.originalImageUrl, receipt.id);
   res.json({ success: true });
 });

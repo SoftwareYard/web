@@ -1,5 +1,6 @@
 "use client";
 
+import { cn } from "@/lib/utils";
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CmsShell } from "@/components/ctrl/cms-shell";
 import { cmsApi } from "@/lib/cms-api";
@@ -47,7 +48,9 @@ import {
   ChevronRight,
   Copy,
   ExternalLink,
+  ImageOff,
   Loader2,
+  NotebookPen,
   Pencil,
   RefreshCw,
   Trash2,
@@ -76,9 +79,9 @@ interface VatLine {
 
 interface Receipt {
   id: string;
-  imageUrl: string;
+  imageUrl: string | null; // null: entered by hand without a photo
   originalImageUrl: string | null;
-  fileName: string;
+  fileName: string | null;
   date: string; // ISO; only the YYYY-MM-DD part is meaningful
   dateSource: "scanned" | "upload" | "manual";
   time: string | null;
@@ -133,8 +136,16 @@ const formatDay = (ymd: string) => ymd.split("-").reverse().join(".");
 const sum = (list: Receipt[], pick: (r: Receipt) => number | null) =>
   list.reduce((s, r) => s + (pick(r) ?? 0), 0);
 
-const needsCheck = (r: Receipt) =>
-  r.dateSource === "upload" || r.total === null || !!r.duplicateOfId || !!r.scanError;
+// Why a receipt should be looked at by a person; empty when it's fine
+const checkReasons = (r: Receipt) =>
+  [
+    r.dateSource === "upload" && "Date not read, filed under the upload day",
+    r.total === null && "Total missing",
+    r.duplicateOfId && "Possible duplicate",
+    r.scanError && r.scanError,
+  ].filter((x): x is string => !!x);
+
+const needsCheck = (r: Receipt) => checkReasons(r).length > 0;
 
 // Upload a few at a time; each upload waits for the scan
 const UPLOAD_CONCURRENCY = 3;
@@ -150,6 +161,8 @@ export default function ReceiptsPage() {
   const [preview, setPreview] = useState<Receipt | null>(null);
   const [rescanning, setRescanning] = useState<Set<string>>(new Set());
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [onlyToCheck, setOnlyToCheck] = useState(false);
+  const [manualOpen, setManualOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const load = useCallback(async () => {
@@ -194,6 +207,13 @@ export default function ReceiptsPage() {
   const yearTotal = sum(yearReceipts, (r) => r.total);
   const yearVat = sum(yearReceipts, (r) => r.vatTotal);
   const toCheck = yearReceipts.filter(needsCheck).length;
+
+  // With the "Need checking" filter on, only flagged receipts are listed (stats stay for the whole year)
+  const shownMonths = onlyToCheck
+    ? months
+        .map((m) => ({ ...m, receipts: m.receipts.filter(needsCheck) }))
+        .filter((m) => m.receipts.length > 0)
+    : months;
 
   const toggle = (id: string) =>
     setExpanded((prev) => {
@@ -347,6 +367,10 @@ export default function ReceiptsPage() {
               </>
             )}
           </Button>
+          <Button variant="outline" className="flex-1 sm:flex-none" onClick={() => setManualOpen(true)}>
+            <NotebookPen className="w-4 h-4 mr-2" />
+            Enter manually
+          </Button>
         </div>
       </div>
 
@@ -357,17 +381,22 @@ export default function ReceiptsPage() {
         <StatCard
           label="Need checking"
           value={String(toCheck)}
-          hint="Date not read, total missing, numbers don&apos;t add up or possible duplicate"
+          hint={onlyToCheck ? "Showing only these · click to show all" : "Click to show only these"}
+          onClick={() => setOnlyToCheck((v) => !v)}
+          active={onlyToCheck}
+          highlight={toCheck > 0}
         />
       </div>
 
       {loading ? (
         <p className="text-muted-foreground">Loading…</p>
-      ) : months.length === 0 ? (
-        <p className="text-muted-foreground text-center py-12 border rounded-lg">No receipts for {year}</p>
+      ) : shownMonths.length === 0 ? (
+        <p className="text-muted-foreground text-center py-12 border rounded-lg">
+          {onlyToCheck ? `Nothing to check in ${year}` : `No receipts for ${year}`}
+        </p>
       ) : (
         <div className="space-y-10">
-          {months.map(({ month, receipts: list, total, vat }) => (
+          {shownMonths.map(({ month, receipts: list, total, vat }) => (
             <section key={month}>
               <div className="flex items-baseline justify-between gap-4 flex-wrap mb-3">
                 <h2 className="text-lg font-semibold">
@@ -397,6 +426,7 @@ export default function ReceiptsPage() {
                   <TableBody>
                     {list.map((r) => {
                       const open = expanded.has(r.id);
+                      const reasons = checkReasons(r);
                       return (
                         <Fragment key={r.id}>
                           <TableRow className="cursor-pointer" onClick={() => toggle(r.id)}>
@@ -404,21 +434,30 @@ export default function ReceiptsPage() {
                               {open ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
                             </TableCell>
                             <TableCell>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  setPreview(r);
-                                }}
-                                aria-label="Show receipt image"
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={r.imageUrl}
-                                  alt={r.fileName}
-                                  loading="lazy"
-                                  className="w-12 h-16 object-cover object-top rounded border bg-muted"
-                                />
-                              </button>
+                              {r.imageUrl ? (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setPreview(r);
+                                  }}
+                                  aria-label="Show receipt image"
+                                >
+                                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                                  <img
+                                    src={r.imageUrl}
+                                    alt={r.fileName ?? "Receipt"}
+                                    loading="lazy"
+                                    className="w-12 h-16 object-cover object-top rounded border bg-muted"
+                                  />
+                                </button>
+                              ) : (
+                                <div
+                                  className="w-12 h-16 rounded border bg-muted flex items-center justify-center text-muted-foreground"
+                                  title="Entered by hand, no photo"
+                                >
+                                  <ImageOff className="w-4 h-4" />
+                                </div>
+                              )}
                             </TableCell>
                             <TableCell className="whitespace-nowrap">
                               <div className="flex items-center gap-1">
@@ -431,6 +470,12 @@ export default function ReceiptsPage() {
                             </TableCell>
                             <TableCell className="min-w-48">
                               <div className="font-medium">{r.merchantName ?? "—"}</div>
+                              {reasons.length > 0 && (
+                                <div className="flex items-start gap-1 text-xs text-amber-600 mt-0.5">
+                                  <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-px" />
+                                  <span>{reasons.join(" · ")}</span>
+                                </div>
+                              )}
                               {r.merchantAddress && (
                                 <div className="text-xs text-muted-foreground">{r.merchantAddress}</div>
                               )}
@@ -468,9 +513,9 @@ export default function ReceiptsPage() {
                                   variant="ghost"
                                   size="icon"
                                   onClick={() => rescan(r)}
-                                  disabled={rescanning.has(r.id)}
+                                  disabled={!r.imageUrl || rescanning.has(r.id)}
                                   aria-label="Rescan"
-                                  title="Read the image again"
+                                  title={r.imageUrl ? "Read the image again" : "No photo to scan"}
                                 >
                                   <RefreshCw className={`w-4 h-4 ${rescanning.has(r.id) ? "animate-spin" : ""}`} />
                                 </Button>
@@ -507,7 +552,7 @@ export default function ReceiptsPage() {
               </DialogTitle>
             </DialogHeader>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={preview.imageUrl} alt={preview.fileName} className="w-full rounded border" />
+            <img src={preview.imageUrl ?? ""} alt={preview.fileName ?? "Receipt"} className="w-full rounded border" />
             {preview.originalImageUrl && (
               <a
                 href={preview.originalImageUrl}
@@ -520,6 +565,17 @@ export default function ReceiptsPage() {
             )}
           </DialogContent>
         </Dialog>
+      )}
+
+      {manualOpen && (
+        <ManualDialog
+          onClose={() => setManualOpen(false)}
+          onSaved={(created) => {
+            setManualOpen(false);
+            setYear(day(created).slice(0, 4));
+            load();
+          }}
+        />
       )}
 
       {editing && (
@@ -556,9 +612,32 @@ export default function ReceiptsPage() {
   );
 }
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function StatCard({
+  label,
+  value,
+  hint,
+  onClick,
+  active,
+  highlight,
+}: {
+  label: string;
+  value: string;
+  hint?: string;
+  onClick?: () => void;
+  active?: boolean;
+  highlight?: boolean;
+}) {
   return (
-    <Card>
+    <Card
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      aria-pressed={onClick ? !!active : undefined}
+      className={cn(
+        onClick && "cursor-pointer hover:bg-muted/50 transition-colors",
+        highlight && "border-amber-400",
+        active && "ring-2 ring-amber-400"
+      )}
+    >
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium text-muted-foreground">{label}</CardTitle>
       </CardHeader>
@@ -636,14 +715,19 @@ function ReceiptDetails({ receipt: r }: { receipt: Receipt }) {
           <dd className="break-all">{r.fiscalCodes.length ? r.fiscalCodes.join(", ") : "—"}</dd>
           <dt className="text-muted-foreground">Photo</dt>
           <dd className="break-all">
-            <a
-              href={r.originalImageUrl ?? r.imageUrl}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-primary hover:underline"
-            >
-              {r.originalImageUrl ? "Original photo (uncropped)" : r.fileName} <ExternalLink className="w-3 h-3" />
-            </a>
+            {r.imageUrl ? (
+              <a
+                href={r.originalImageUrl ?? r.imageUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-primary hover:underline"
+              >
+                {r.originalImageUrl ? "Original photo (uncropped)" : r.fileName ?? "Photo"}{" "}
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            ) : (
+              "None (entered by hand)"
+            )}
           </dd>
           <dt className="text-muted-foreground">Date</dt>
           <dd>
@@ -714,11 +798,13 @@ function EditDialog({
         <DialogHeader>
           <DialogTitle>Edit receipt</DialogTitle>
         </DialogHeader>
-        <div className="grid gap-6 md:grid-cols-[1fr_16rem]">
-          <a href={receipt.imageUrl} target="_blank" rel="noreferrer" className="block">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={receipt.imageUrl} alt={receipt.fileName} className="w-full rounded border" />
-          </a>
+        <div className={cn("grid gap-6", receipt.imageUrl && "md:grid-cols-[1fr_16rem]")}>
+          {receipt.imageUrl && (
+            <a href={receipt.imageUrl} target="_blank" rel="noreferrer" className="block">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={receipt.imageUrl} alt={receipt.fileName ?? "Receipt"} className="w-full rounded border" />
+            </a>
+          )}
           <div className="space-y-4">
             <div className="space-y-1">
               <Label htmlFor="receipt-date">Date</Label>
@@ -777,7 +863,7 @@ function EditDialog({
               <Trash2 className="w-4 h-4 mr-2" />
               Delete
             </Button>
-            <Button variant="outline" onClick={onRescan} disabled={rescanning}>
+            <Button variant="outline" onClick={onRescan} disabled={rescanning || !receipt.imageUrl}>
               <RefreshCw className={`w-4 h-4 mr-2 ${rescanning ? "animate-spin" : ""}`} />
               Rescan
             </Button>
@@ -792,6 +878,190 @@ function EditDialog({
             </Button>
           </div>
         </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// For receipts too damaged or faded to scan: type in what's legible, optionally attach a photo
+function ManualDialog({ onClose, onSaved }: { onClose: () => void; onSaved: (r: Receipt) => void }) {
+  const today = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Skopje" }).format(new Date());
+  const [date, setDate] = useState(today);
+  const [time, setTime] = useState("");
+  const [total, setTotal] = useState("");
+  const [vatTotal, setVatTotal] = useState("");
+  const [merchantName, setMerchantName] = useState("");
+  const [merchantTaxNumber, setMerchantTaxNumber] = useState("");
+  const [receiptNumber, setReceiptNumber] = useState("");
+  const [category, setCategory] = useState<Category>("other");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("unknown");
+  const [photo, setPhoto] = useState<File | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!date) {
+      toast.error("Date is required");
+      return;
+    }
+    if (!total.trim()) {
+      toast.error("Total is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const form = new FormData();
+      Object.entries({
+        date,
+        time,
+        total,
+        vatTotal,
+        merchantName,
+        merchantTaxNumber,
+        receiptNumber,
+        category,
+        paymentMethod,
+      }).forEach(([key, value]) => form.append(key, value));
+      if (photo) form.append("image", photo);
+
+      const res = await fetch(`${API_URL}/api/receipts/manual`, {
+        method: "POST",
+        credentials: "include",
+        body: form,
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        throw new Error(body.error || "Save failed");
+      }
+      const created = (await res.json()) as Receipt;
+      if (created.duplicateOfId) toast.warning("Receipt saved, but it looks like a duplicate");
+      else toast.success("Receipt saved");
+      onSaved(created);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Dialog open onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Enter receipt manually</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={save} className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="manual-date">Date *</Label>
+              <Input
+                id="manual-date"
+                type="date"
+                value={date}
+                max={today}
+                onChange={(e) => setDate(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="manual-time">Time</Label>
+              <Input id="manual-time" type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="manual-total">Total (MKD) *</Label>
+              <Input
+                id="manual-total"
+                inputMode="decimal"
+                value={total}
+                onChange={(e) => setTotal(e.target.value)}
+                placeholder="e.g. 2780"
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="manual-vat">VAT (MKD)</Label>
+              <Input
+                id="manual-vat"
+                inputMode="decimal"
+                value={vatTotal}
+                onChange={(e) => setVatTotal(e.target.value)}
+                placeholder="optional"
+              />
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="manual-merchant">Merchant</Label>
+            <Input
+              id="manual-merchant"
+              value={merchantName}
+              onChange={(e) => setMerchantName(e.target.value)}
+              placeholder="e.g. ГЕНЕРАЛ ЛОРД ДООЕЛ"
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1">
+              <Label htmlFor="manual-tax">ЕДБ (tax no.)</Label>
+              <Input
+                id="manual-tax"
+                inputMode="numeric"
+                value={merchantTaxNumber}
+                onChange={(e) => setMerchantTaxNumber(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="manual-number">Receipt no.</Label>
+              <Input id="manual-number" value={receiptNumber} onChange={(e) => setReceiptNumber(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label>Category</Label>
+              <Select value={category} onValueChange={(v) => setCategory(v as Category)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(CATEGORY_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label>Payment</Label>
+              <Select value={paymentMethod} onValueChange={(v) => setPaymentMethod(v as PaymentMethod)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PAYMENT_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="manual-photo">Photo (optional, kept as is, not scanned)</Label>
+            <Input
+              id="manual-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={(e) => setPhoto(e.target.files?.[0] ?? null)}
+            />
+          </div>
+          <DialogFooter className="gap-2">
+            <Button type="button" variant="outline" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Save receipt
+            </Button>
+          </DialogFooter>
+        </form>
       </DialogContent>
     </Dialog>
   );
