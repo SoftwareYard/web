@@ -1,92 +1,34 @@
 "use client"
 
 import { useRef } from "react"
-import {
-  Zap,
-  Users,
-  UserPlus,
-  Database,
-  Shield,
-  Smartphone,
-  Box,
-  Cloud,
-  FileInput,
-  Headphones,
-  ArrowUpRight,
-} from "lucide-react"
+import { Users, Smartphone, Bot, Shield, ArrowUpRight } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
 import { cn } from "@/lib/utils"
 
 const services = [
   {
-    icon: Zap,
-    title: "Digital Transformation",
-    description:
-      "From advice on your existing technology estate to hands-on coaching of development teams to optimize Agile practices, we ensure you leverage the full power of digital platforms.",
-    featured: true,
-  },
-  {
     icon: Users,
-    title: "Dedicated Resources",
+    title: "Dedicated Teams",
     description:
-      "We help you find the right people that will become the core tech team you can trust to deliver, or augment your current delivery team.",
-    featured: false,
+      "Engineers who work as part of your team, on your tools and your schedule. Scale up or down as the project needs.",
   },
   {
-    icon: UserPlus,
-    title: "Recruitment",
+    icon: Smartphone,
+    title: "Web and Mobile App Development",
     description:
-      "We source, screen and place skilled tech talent for your team, managing the process end-to-end — from candidate search to final offer — so you get the right hire without the overhead.",
-    featured: false,
+      "Custom applications built from idea to launch, including design, development, cloud setup, and ongoing support.",
   },
   {
-    icon: Database,
-    title: "App & Data Integration",
+    icon: Bot,
+    title: "AI and Automation",
     description:
-      "We provide consultancy, implementation, migration and support services across proprietary enterprise integration products and open-source solutions.",
-    featured: false,
+      "AI assistants, workflow automation, and integrations that connect the tools you already use and cut out repetitive work.",
   },
   {
     icon: Shield,
     title: "Quality Assurance",
     description:
-      "Application Testing, Performance Testing, Test Automation, Security Testing, Usability Testing, Accessibility Testing, Consulting and Workshops.",
-    featured: false,
-  },
-  {
-    icon: Smartphone,
-    title: "App Development",
-    description:
-      "We create and build bespoke mobile and web applications that are user-friendly, scalable, and secure. From idea to deployment, our team provides solutions that meet your business goals.",
-    featured: true,
-  },
-  {
-    icon: Box,
-    title: "Product Development",
-    description:
-      "With experience bringing companies from initial concept validation through to funding acquisition, you can have confidence that we will challenge, support and advise on the best product development path.",
-    featured: false,
-  },
-  {
-    icon: Cloud,
-    title: "Cloud Solutions",
-    description:
-      "With expert cloud solutions, we can offer advice through to implementation of cloud-based systems that scale with your business needs.",
-    featured: false,
-  },
-  {
-    icon: FileInput,
-    title: "Data Entry",
-    description:
-      "We create and maintain databases, always striving to include the newest customer and account details. Our team can successfully manage large amounts of information.",
-    featured: false,
-  },
-  {
-    icon: Headphones,
-    title: "Customer Support",
-    description:
-      "Every complaint or issue regarding a product and/or service is promptly taken care of by our specialists skilled to deal with customer challenges.",
-    featured: false,
+      "Manual and automated testing, including performance, security, and accessibility, for your product or ours.",
   },
 ]
 
@@ -172,6 +114,11 @@ export function ServicesSection() {
             )
           })}
         </div>
+
+        <p className="text-muted-foreground text-center mt-12 text-pretty">
+          We also offer tech recruitment, data entry, customer support, and digital
+          transformation consulting. Ask us about them.
+        </p>
       </div>
     </section>
   )

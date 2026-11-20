@@ -1,9 +1,13 @@
 "use client"
 
-import { useEffect, useRef } from "react"
+import { useEffect, useRef, useState } from "react"
+import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { ScheduleCallDialog } from "@/components/schedule-call-dialog"
 
 export function Hero() {
   const containerRef = useRef<HTMLDivElement>(null)
+  const [scheduleOpen, setScheduleOpen] = useState(false)
 
   useEffect(() => {
     const container = containerRef.current
@@ -36,28 +40,52 @@ export function Hero() {
 
           {/* Main heading */}
           <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold tracking-tight mb-6 animate-fade-in-up animation-delay-100 text-balance">
-            IT Solutions{" "}
-            <span className="gradient-text">For Growing</span>{" "}
-            Your Business
+            Dedicated software engineers,{" "}
+            <span className="gradient-text">without the agency price tag</span>
           </h1>
 
           {/* Subtitle */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto mb-10 animate-fade-in-up animation-delay-200 text-pretty leading-relaxed">
-            Transform your ideas into powerful digital experiences. We build scalable, 
-            user-friendly applications that drive growth and innovation.
+            SoftwareYard builds web apps, mobile apps, and AI-powered tools for companies
+            across Europe. Hire a dedicated team from North Macedonia or hand us the whole
+            project.
+          </p>
+
+          {/* Buttons */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 animate-fade-in-up animation-delay-300">
+            <Button
+              size="lg"
+              className="rounded-full px-8"
+              onClick={() => setScheduleOpen(true)}
+            >
+              Schedule a Call
+            </Button>
+            <Button size="lg" variant="outline" className="rounded-full px-8 bg-transparent" asChild>
+              <Link href="/clients">See Our Work</Link>
+            </Button>
+          </div>
+          <p className="text-sm text-muted-foreground mt-4 animate-fade-in-up animation-delay-300">
+            Same working day as your team, CET hours.
+          </p>
+
+          {/* Proof line */}
+          <p className="text-sm md:text-base text-muted-foreground mt-10 animate-fade-in-up animation-delay-400">
+            <span className="text-foreground italic">&ldquo;Finished more than 20 projects together.&rdquo;</span>{" "}
+            Nikola Maksimovski, Founder at VSC
           </p>
 
           {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 mt-20 animate-fade-in-up animation-delay-400">
+          <div className="grid grid-cols-3 gap-8 mt-16 max-w-3xl mx-auto animate-fade-in-up animation-delay-400">
             {[
               { value: "150+", label: "Projects Delivered" },
-              { value: "10+", label: "Happy Clients" },
-              { value: "4+", label: "Years Experience" },
-              { value: "99%", label: "Client Satisfaction" },
+              { value: "18", label: "Team Members" },
+              { value: "Since 2022", label: "" },
             ].map((stat) => (
-              <div key={stat.label} className="text-center">
+              <div key={stat.value} className="text-center">
                 <div className="text-3xl md:text-4xl font-bold">{stat.value}</div>
-                <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+                {stat.label && (
+                  <div className="text-sm text-muted-foreground mt-1">{stat.label}</div>
+                )}
               </div>
             ))}
           </div>
@@ -66,6 +94,8 @@ export function Hero() {
 
       {/* Bottom gradient */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent" />
+
+      <ScheduleCallDialog open={scheduleOpen} onOpenChange={setScheduleOpen} />
     </section>
   )
 }

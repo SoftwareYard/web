@@ -210,7 +210,7 @@ export default function AssetsPage() {
                   {asset.yearOfManufacture}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {new Date(asset.purchaseDate).toLocaleDateString()}
+                  {new Date(asset.purchaseDate).toLocaleDateString("en-GB")}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {asset.currentHolder?.name ?? "—"}

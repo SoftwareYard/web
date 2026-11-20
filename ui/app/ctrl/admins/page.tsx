@@ -120,7 +120,7 @@ export default function AdminsPage() {
                 <TableCell className="text-muted-foreground">{a.email}</TableCell>
                 <TableCell className="text-muted-foreground">{a.role}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {new Date(a.createdAt).toLocaleDateString()}
+                  {new Date(a.createdAt).toLocaleDateString("en-GB")}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">

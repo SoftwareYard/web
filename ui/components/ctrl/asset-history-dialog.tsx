@@ -61,10 +61,10 @@ export function AssetHistoryDialog({
                 <div>
                   <p className="font-medium">{entry.teamMember.name}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(entry.assignedAt).toLocaleDateString()}
+                    {new Date(entry.assignedAt).toLocaleDateString("en-GB")}
                     {" — "}
                     {entry.returnedAt
-                      ? new Date(entry.returnedAt).toLocaleDateString()
+                      ? new Date(entry.returnedAt).toLocaleDateString("en-GB")
                       : "Present"}
                   </p>
                 </div>

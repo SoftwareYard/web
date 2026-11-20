@@ -218,14 +218,14 @@ function InvoicesPageInner() {
                 </TableCell>
                 <TableCell className="text-muted-foreground">
                   {invoice.paidDate
-                    ? new Date(invoice.paidDate).toLocaleDateString()
+                    ? new Date(invoice.paidDate).toLocaleDateString("en-GB")
                     : "—"}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {new Date(invoice.dueDate).toLocaleDateString()}
+                  {new Date(invoice.dueDate).toLocaleDateString("en-GB")}
                 </TableCell>
                 <TableCell className="text-muted-foreground">
-                  {new Date(invoice.createdAt).toLocaleDateString()}
+                  {new Date(invoice.createdAt).toLocaleDateString("en-GB")}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">

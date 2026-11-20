@@ -233,7 +233,7 @@ export default function ExpensesPage() {
             {expenses.map((expense) => (
               <TableRow key={expense.id}>
                 <TableCell className="whitespace-nowrap">
-                  {new Date(expense.date).toLocaleDateString()}
+                  {new Date(expense.date).toLocaleDateString("en-GB")}
                 </TableCell>
                 <TableCell className="text-muted-foreground">{expense.expenseType.type}</TableCell>
                 <TableCell className="text-muted-foreground">{expense.store.title}</TableCell>

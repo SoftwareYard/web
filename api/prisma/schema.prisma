@@ -500,8 +500,27 @@ model CandidateProfile {
   model           String?
   scannedAt       DateTime       @default(now()) @map("scanned_at")
 
+  embeddings CandidateEmbedding[]
+
   @@index([status])
   @@map("candidate_profiles")
+}
+
+// Semantic embeddings of candidate profiles, written by the AI Operations
+// Copilot (pgvector). One row per profile and embedding model.
+model CandidateEmbedding {
+  id                 BigInt                     @id @default(autoincrement())
+  candidateProfileId String                     @map("candidate_profile_id")
+  model              String
+  embedding          Unsupported("vector(768)")
+  contentHash        String                     @map("content_hash")
+  createdAt          DateTime                   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt          DateTime                   @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  candidateProfile CandidateProfile @relation(fields: [candidateProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([candidateProfileId, model], map: "candidate_embeddings_profile_model_key")
+  @@map("candidate_embeddings")
 }
 
 // Queue of CV analyses for the AI Operations Copilot (one job per application).

@@ -2,7 +2,6 @@
 
 import { useRef } from "react"
 import Image from "next/image"
-import { Mail } from "lucide-react"
 import { useInView } from "@/hooks/use-in-view"
 import { cn } from "@/lib/utils"
 
@@ -12,7 +11,6 @@ interface TeamMember {
   role: string
   image: string
   bio: string
-  email?: string | null
 }
 
 function TeamCard({ member, index }: { member: TeamMember; index: number }) {
@@ -46,15 +44,6 @@ function TeamCard({ member, index }: { member: TeamMember; index: number }) {
             </div>
           </>
         )}
-
-        {member.email && (
-          <a
-            href={`mailto:${member.email}`}
-            className="absolute bottom-3 right-3 w-9 h-9 rounded-full bg-background flex items-center justify-center text-foreground hover:bg-accent hover:text-background transition-all duration-300 ease-out opacity-0 translate-y-4 group-hover:opacity-100 group-hover:translate-y-0"
-          >
-            <Mail className="w-4 h-4" />
-          </a>
-        )}
       </div>
 
       <h3 className="text-base font-semibold">{member.name}</h3>
@@ -84,8 +73,7 @@ export function TeamSectionClient({ team }: { team: TeamMember[] }) {
             Meet the experts behind your success
           </h2>
           <p className="text-lg text-muted-foreground text-pretty">
-            Our diverse team of passionate professionals brings together decades
-            of experience in software development, design, and project management.
+            Developers, QA engineers, and specialists who work as part of your team.
           </p>
         </div>
 

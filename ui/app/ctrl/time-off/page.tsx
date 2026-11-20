@@ -431,8 +431,8 @@ export default function TimeOffAdminPage() {
                       {r.employee.name}
                       <div className="text-xs text-muted-foreground">{r.employee.email || "—"}</div>
                     </TableCell>
-                    <TableCell>{new Date(r.startDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{new Date(r.endDate).toLocaleDateString()}</TableCell>
+                    <TableCell>{new Date(r.startDate).toLocaleDateString("en-GB")}</TableCell>
+                    <TableCell>{new Date(r.endDate).toLocaleDateString("en-GB")}</TableCell>
                     <TableCell>{r.workingDays}</TableCell>
                     <TableCell>
                       <Badge variant={r.type === "Special" ? "outline" : "secondary"}>
@@ -450,7 +450,7 @@ export default function TimeOffAdminPage() {
                       {r.reviewedBy?.name || "—"}
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(r.createdAt).toLocaleDateString()}
+                      {new Date(r.createdAt).toLocaleDateString("en-GB")}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-1">

@@ -102,7 +102,7 @@ export default function ClientsPage() {
               <TableRow key={client.id}>
                 <TableCell className="font-medium">{client.title}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {new Date(client.contractDate).toLocaleDateString()}
+                  {new Date(client.contractDate).toLocaleDateString("en-GB")}
                 </TableCell>
                 <TableCell className="text-muted-foreground">{client.domain}</TableCell>
                 <TableCell>

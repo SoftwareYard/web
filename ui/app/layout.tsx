@@ -11,8 +11,8 @@ const _spaceGrotesk = Space_Grotesk({ subsets: ["latin"] });
 const SITE_URL = 'https://softwareyard.co'
 const GA_ID = process.env.NEXT_PUBLIC_GA_ID
 
-const title = 'SoftwareYard - IT Solutions For Growing Your Business'
-const description = 'Transform your business with cutting-edge software solutions. We provide digital transformation, app development, cloud solutions, and dedicated resources.'
+const title = 'SoftwareYard - Dedicated software engineers, without the agency price tag'
+const description = 'SoftwareYard builds web apps, mobile apps, and AI-powered tools for companies across Europe. Hire a dedicated team from North Macedonia or hand us the whole project.'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),

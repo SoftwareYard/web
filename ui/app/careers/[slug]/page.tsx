@@ -42,7 +42,7 @@ export default async function JobPage({ params }: JobPageProps) {
     notFound()
   }
 
-  const formattedDate = new Date(job.postedDate).toLocaleDateString("en-US", {
+  const formattedDate = new Date(job.postedDate).toLocaleDateString("en-GB", {
     year: "numeric",
     month: "long",
     day: "numeric",

@@ -225,7 +225,7 @@ export function PayriseHistoryDialog({
                   ) : (
                     <>
                       <TableCell className="whitespace-nowrap">
-                        {new Date(p.date).toLocaleDateString()}
+                        {new Date(p.date).toLocaleDateString("en-GB")}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{formatEur(p.netSalary)}</TableCell>
                       <TableCell className="text-muted-foreground">{formatEur(p.grossSalary)}</TableCell>

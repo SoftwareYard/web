@@ -104,7 +104,7 @@ export default function StoresPage() {
               <TableRow key={store.id}>
                 <TableCell className="font-medium">{store.title}</TableCell>
                 <TableCell className="text-muted-foreground">
-                  {new Date(store.createdAt).toLocaleDateString()}
+                  {new Date(store.createdAt).toLocaleDateString("en-GB")}
                 </TableCell>
                 <TableCell>
                   <div className="flex gap-1">

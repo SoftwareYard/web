@@ -231,7 +231,7 @@ function TeamPageInner() {
                 </TableCell>
                 <TableCell className={isOverdue ? "text-destructive font-medium" : "text-muted-foreground"}>
                   {member.nextContractDate
-                    ? new Date(member.nextContractDate).toLocaleDateString()
+                    ? new Date(member.nextContractDate).toLocaleDateString("en-GB")
                     : "—"}
                 </TableCell>
                 <TableCell>

@@ -4,6 +4,12 @@ import Link from "next/link"
 import { Facebook, Instagram, Linkedin, Mail, MapPin, Clock } from "lucide-react"
 
 const footerLinks = {
+  services: [
+    { label: "Dedicated Teams", href: "/#services" },
+    { label: "Web and Mobile App Development", href: "/#services" },
+    { label: "AI and Automation", href: "/#services" },
+    { label: "Quality Assurance", href: "/#services" },
+  ],
   company: [
     { label: "About Us", href: "#about" },
     { label: "Clients", href: "/clients" },
@@ -61,12 +67,18 @@ export function Footer() {
           {/* Services */}
           <div>
             <h4 className="font-semibold text-background mb-4">Services</h4>
-            <a
-              href="#services"
-              className="text-background/60 hover:text-background transition-colors text-sm"
-            >
-              Our Services
-            </a>
+            <ul className="space-y-3">
+              {footerLinks.services.map((link) => (
+                <li key={link.label}>
+                  <a
+                    href={link.href}
+                    className="text-background/60 hover:text-background transition-colors text-sm"
+                  >
+                    {link.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
 
           {/* Company */}
